@@ -1,0 +1,41 @@
+__pycache__/
+*.pyc
+*.db
+.venv/
+venv/
+data/synthetic_events.csv
+experiments/results/*.png
+experiments/results/*.json
+.pytest_cache/
+node_modules/
+dist/
+.DS_Store
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.pkcs12
+secrets/
+credentials.json
+*_secrets.*
+
+# Local databases (beyond *.db above)
+*.sqlite
+*.sqlite3
+
+# Build output
+build/
+*.egg-info/
+
+# OS / editor
+Thumbs.db
+.idea/
+.vscode/
+*.swp
