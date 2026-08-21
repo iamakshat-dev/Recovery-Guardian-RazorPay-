@@ -1,7 +1,7 @@
 """
-Recovery Guardian — Core Pipeline (Day 3)
+Recovery Guardian — Core Pipeline (Day 3, classifier updated Day 4)
 
-    PaymentEvent -> feature builder -> placeholder classifier
+    PaymentEvent -> feature builder -> real Logistic Regression classifier
                  -> placeholder policy engine -> DecisionRecord -> SQLite
 
 This module is the single reusable entry point every caller goes through:
@@ -15,6 +15,14 @@ must not contain:
 
 `run_pipeline` operates purely on the typed domain objects in
 src/domain/models.py; it never sees a raw CSV row or an HTTP payload.
+
+Day 4 update: the classifier stage now uses the real, trained Logistic
+Regression model (src/model/classifier.py) instead of the Day 3
+structural placeholder (src/model/placeholder_classifier.py). The
+placeholder remains in the codebase as a reference/test fixture but is no
+longer used in this production path. The policy engine is UNCHANGED —
+still the Day 3 placeholder (policy_version="placeholder-v1") — real
+policy logic is later work (Day 7).
 """
 
 import sqlite3
@@ -27,7 +35,7 @@ from src.audit.logger import persist_decision_record
 from src.db import SCHEMA, get_connection
 from src.domain.models import DecisionRecord, PaymentEvent
 from src.features.build_features import build_features
-from src.model.placeholder_classifier import RootCauseClassifier
+from src.model.classifier import RootCauseLogRegClassifier
 from src.policy.placeholder_engine import PolicyEngine
 
 
@@ -62,8 +70,8 @@ def run_pipeline(
     features_df = build_features(pd.DataFrame([event.model_dump()]), keep_label=False)
     features_row = features_df.iloc[0]
 
-    # 3-4. Placeholder classifier -> RootCausePrediction.
-    classifier = RootCauseClassifier()
+    # 3-4. Real, trained Logistic Regression classifier -> RootCausePrediction.
+    classifier = RootCauseLogRegClassifier()
     prediction = classifier.predict(features_row)
 
     # 5-6. Placeholder policy engine -> PolicyDecision.

@@ -6,6 +6,7 @@ venv/
 data/synthetic_events.csv
 experiments/results/*.png
 experiments/results/*.json
+artifacts/
 .pytest_cache/
 node_modules/
 dist/

@@ -140,7 +140,12 @@ def test_model_version_and_policy_version_are_recorded():
     event = make_event()
     record = run_pipeline(event, conn=fresh_conn())
 
-    assert record.prediction.model_version == "placeholder-v1"
+    # Day 4: the production pipeline's classifier stage is now the real,
+    # trained Logistic Regression model, not the Day 3 placeholder — this
+    # assertion is the one intentional Day 3 -> Day 4 contract update
+    # (see src/model/classifier.py, src/pipeline/pipeline.py).
+    assert record.prediction.model_version == "root-cause-logreg-v1"
+    # The policy engine is UNCHANGED — still the Day 3 placeholder.
     assert record.policy.policy_version == "placeholder-v1"
 
 
@@ -154,7 +159,8 @@ def test_pipeline_requires_no_llm_or_network_dependency(monkeypatch):
 
     event = make_event()
     record = run_pipeline(event, conn=fresh_conn())
-    assert record.prediction.model_version == "placeholder-v1"  # ran fully offline
+    # Day 4: real model, but still ran fully offline with no LLM/network call.
+    assert record.prediction.model_version == "root-cause-logreg-v1"
 
 
 # --- Test 6: invalid input ------------------------------------------------------

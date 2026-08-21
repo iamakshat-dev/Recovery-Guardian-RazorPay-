@@ -1,4 +1,4 @@
-.PHONY: install data initdb run test clean
+.PHONY: install data initdb train run test clean
 
 install:
 	pip install -r requirements.txt
@@ -9,6 +9,9 @@ data:
 initdb:
 	python3 src/db.py
 
+train:
+	python3 -m src.model.training
+
 run:
 	uvicorn src.api.app:app --reload
 
@@ -18,3 +21,4 @@ test:
 clean:
 	rm -f recovery_guardian.db
 	rm -f data/synthetic_events.csv
+	rm -rf artifacts/
