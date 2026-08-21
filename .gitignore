@@ -1,5 +1,5 @@
 __pycache__/
-*.pyc
+*.py[cod]
 *.db
 .venv/
 venv/
@@ -24,6 +24,7 @@ dist/
 *.pkcs12
 secrets/
 credentials.json
+secrets.json
 *_secrets.*
 
 # Local databases (beyond *.db above)
