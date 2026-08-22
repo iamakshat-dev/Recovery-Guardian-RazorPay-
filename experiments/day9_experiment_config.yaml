@@ -1,0 +1,33 @@
+# Recovery Guardian — Day 9 Experiment Configuration
+#
+# FROZEN before the primary experiment was run. Not modified after seeing
+# results — see docs/architecture.md's Day 9 section and PROGRESS.md.
+
+experiment_name: "day9_four_strategy_comparison"
+
+dataset:
+  source: "data/synthetic_events.csv"
+  subset: "frozen 15% test split (src.model.splitting.train_val_test_split, random_state=42)"
+  selection_rule: "the exact same held-out test split already used for Day 4/5 classifier evaluation"
+  transaction_count: 242
+
+strategies:
+  - NAIVE_RETRY
+  - RULES_ONLY
+  - GUARDIAN
+  - NO_ACTION
+
+primary_seed: 42
+
+# Predeclared BEFORE observing any result. Never extended/changed after
+# seeing results.
+sensitivity_seeds:
+  - 43
+  - 44
+
+# src/recovery/simulation_config.yaml, unmodified from Day 8.
+simulation_configuration: "src/recovery/simulation_config.yaml (Day 8, unmodified)"
+
+output_directory: "experiments/results"
+
+currency_tolerance: 0.01

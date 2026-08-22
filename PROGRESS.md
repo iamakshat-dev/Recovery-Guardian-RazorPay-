@@ -360,3 +360,82 @@ Baseline before this pass: 99 passed, working tree clean at `cc65f13`.
 - `unrecovered_amount` is a derived helper function, not a persisted
   `RecoveryOutcome` field (documented design choice — see
   `docs/architecture.md`'s Day 8 section).
+
+## Day 9 — Four-strategy counterfactual experiment
+
+Baseline before this pass: 132 passed, working tree clean at `7ce6ba3`.
+
+- **Objective:** measure how four action-selection strategies
+  (`NAIVE_RETRY`, `RULES_ONLY`, `GUARDIAN`, `NO_ACTION`) compare against
+  the same evidence, the same Day 8 outcome environment, and the same
+  common random numbers. Not a tuning exercise — nothing in the ML,
+  calibration, Day 7 policy, or Day 8 simulation config was changed.
+- **Day 8 compatibility check performed first:** `estimate_outcome`'s
+  existing `seed` parameter already satisfies Day 9's CRN requirement
+  (verified empirically) — **Situation B**, no compatibility fix needed,
+  `src/recovery/simulator.py` untouched.
+- `src/experiment/random_state.py`: SHA-256-based deterministic
+  per-transaction seed derivation (never Python's `hash()`).
+- `src/experiment/strategies.py`: the four strategies, one common
+  `select_action(payment_event) -> RecoveryAction` interface.
+  `GuardianStrategy` calls the real feature builder + real calibrated
+  classifier + real Day 7 `RulesPolicyEngine` directly, bypassing only
+  the persistence/idempotency-write layer (Option A) — verified to
+  return the same action on repeated/cross-instance calls for the same
+  transaction, and to never import any DB/persistence function.
+- `src/experiment/dataset.py`: loads the existing frozen 15% test split
+  (242 rows, `random_state=42`) — the same split Day 4/5 evaluated.
+- `src/experiment/runner.py`, `results.py`: one shared experiment runner
+  and aggregation module — no per-strategy runner or simulator exists.
+- `src/recovery/evidence.py`: `RecoveryEvidence` extended additively with
+  `failure_code: str = ""` (rules-only needs it; explicitly permitted by
+  spec) — same additive-field pattern as every previous day.
+- `experiments/day9_experiment_config.yaml`: frozen **before** the
+  primary run — dataset subset, primary seed (42), sensitivity seeds (43,
+  44, predeclared), currency tolerance (`1e-2`, no pre-existing repo
+  convention existed).
+- `experiments/run_day9_experiment.py`: CLI entry point. Run three times
+  (seeds 42, 43, 44) plus a second, fully independent process re-run of
+  seed 42 — **byte-identical output confirmed** (`diff` + matching MD5).
+- Test count: 132 → 182 passed (50 new, across
+  `test_experiment_strategies.py` [31], `test_experiment_crn.py` [10],
+  `test_experiment_metrics.py` [9]). Day 7's full safety suite (47 tests)
+  re-run and still green. ML foundation confirmed frozen via `git diff`
+  against both the Day 6 and Day 8 commits (`src/model`, `src/features`,
+  `data` all empty).
+- Forbidden-mapping search: only documentation/test/hypothetical-
+  capability matches (no operational Guardian mapping); directly verified
+  in the actual experiment output that Guardian selected `BLOCK_RECONCILE`
+  for all 25 `WEBHOOK_AMBIGUITY` transactions in the test split and
+  `DEFER_RETRY` zero times for that root cause.
+
+### Primary result (seed 42, 242 transactions, `experiments/results/day9_seed_42_aggregate.json`)
+
+| Metric | Naive Retry | Rules-only | Guardian | No Action |
+|---|---:|---:|---:|---:|
+| Amount at risk | ₹677,213.78 | ₹677,213.78 | ₹677,213.78 | ₹677,213.78 |
+| Simulated recovered | ₹205,427.28 | ₹238,230.16 | ₹193,316.24 | ₹0.00 |
+| Recovery rate | 29.75% | 33.88% | 28.93% | 0.00% |
+| Duplicate-charge risk count | 12 | 3 | **0** | 0 |
+
+Sensitivity seeds 43/44 show the same qualitative pattern: Guardian's
+duplicate-charge-risk count is **0 across all three seeds**; naive ranges
+5–12, rules-only ranges 1–3. Guardian's `WEBHOOK_AMBIGUITY` handling (25
+transactions, seed 42): 0 recovered, 0 duplicate risk, 100%
+`BLOCK_RECONCILE`, vs. naive's 68% recovery *and* 48% duplicate-charge
+risk on the same 25 transactions. Full per-transaction and root-cause
+segment data is in `experiments/results/`.
+
+**All recovery figures above are SIMULATED/counterfactual — Day 8
+synthetic assumptions, not observed Razorpay revenue.**
+
+### Known limitations (Day 9)
+
+- All outcome probabilities are still Day 8's unrecalibrated synthetic
+  assumptions.
+- Guardian trades some raw recovery (lower than naive/rules-only on
+  `INFRASTRUCTURE`, zero on `OTP_TIMEOUT`/`USER_ABANDONMENT`) for zero
+  duplicate-charge risk — a genuine, measured trade-off, not concealed.
+- No statistical significance testing performed (explicitly Day 10 work).
+- Day 10 will separately analyze and interpret these frozen results —
+  not started.

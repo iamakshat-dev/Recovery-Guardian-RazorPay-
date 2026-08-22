@@ -282,3 +282,176 @@ scored with `BLOCK_RECONCILE`, never `DEFER_RETRY`
 - `simulate_batch()` (`src/recovery/batch.py`) is the only batch mechanism
   built so far; the naive, rules-only, and Guardian action selectors
   themselves are explicitly Day 9/10 work and do not exist yet.
+
+---
+
+## Day 9 — Four-Strategy Counterfactual Experiment
+
+The question Day 9 answers: *given exactly the same transaction evidence,
+how do four action-selection strategies compare when evaluated against
+the same counterfactual outcome environment and the same controlled
+randomness?* This is a measurement exercise, not a tuning exercise — no
+ML, calibration, Day 7 policy, or Day 8 simulation assumption was changed
+to produce these numbers.
+
+### Day 8 API compatibility (verified before writing any Day 9 code)
+
+`estimate_outcome`'s existing `seed: Optional[int] = None` keyword
+parameter was **already sufficient** for Day 9's common-random-number
+requirement — **Situation B**, not C. Verified empirically: holding
+`seed` constant while varying only `action` produces the identical
+underlying `random.Random(seed)` draw sequence regardless of action; only
+the action-specific probability (`probability_of_recovery`, unchanged)
+determines the result. **No change was made to
+`src/recovery/simulator.py`.** Day 8's stochastic structure — two
+separate draws per automated action (one for `recovered`, one for
+`duplicate_charge_risk`), computed from marginal, not joint, probabilities
+— was inspected and preserved exactly as-is; Day 9 does not reinterpret or
+"fix" it.
+
+`RecoveryEvidence` was extended additively with `failure_code: str = ""`
+(the rules-only strategy needs it, and the Day 9 spec explicitly permits
+it being available to every strategy) — the same additive-field pattern
+used on every previous day; nothing existing was renamed or altered.
+
+### Common random numbers
+
+One deterministic seed per transaction, derived via SHA-256 (never
+Python's `hash()`, which is randomized per-process by `PYTHONHASHSEED`
+and would break cross-process reproducibility):
+
+```
+seed = int(sha256(f"{transaction_id}:{experiment_seed}").hexdigest()[:16], 16)
+```
+(`src/experiment/random_state.py`). The same seed is passed into
+`estimate_outcome` for all four strategies evaluating a given
+transaction — so differences in outcome arise from *which action was
+selected*, never from independent simulation luck.
+
+### The four strategies
+
+Common interface: `select_action(payment_event: PaymentEvent) ->
+RecoveryAction` (`src/experiment/strategies.py`). Strategies only select
+an action — none of them simulate outcomes or touch `estimate_outcome`
+directly.
+
+| Strategy | Logic | Uses ML/policy? |
+|---|---|---|
+| `NaiveRetryStrategy` | Always `DEFER_RETRY`, unconditionally | No |
+| `RulesOnlyStrategy` | Frozen `failure_code -> action` table (below) | No |
+| `GuardianStrategy` | Real feature builder -> real calibrated classifier -> real Day 7 `RulesPolicyEngine` | Yes — the actual production path |
+| `NoActionStrategy` | Always `NO_ACTION`, unconditionally | No |
+
+**Rules-only's frozen mapping** (decided before running the experiment):
+
+| failure_code | Action |
+|---|---|
+| `gateway_timeout` | `DEFER_RETRY` |
+| `internal_error`, `service_unavailable` | `DEFER_RETRY` |
+| `issuer_declined`, `card_expired`, `invalid_card`, `insufficient_funds` | `CUSTOMER_RECOVERY` |
+| `otp_timeout`, `3ds_auth_failed`, `user_cancelled`, `session_expired` | `HUMAN_REVIEW` |
+| `unknown` | `HUMAN_REVIEW` |
+| anything else | `HUMAN_REVIEW` (safe fallback) |
+
+`gateway_timeout` and `unknown` are **deliberately non-unique** by Day 1
+dataset design — both occur under `INFRASTRUCTURE` and under
+`WEBHOOK_AMBIGUITY`. Rules-only cannot distinguish those two root causes
+from failure_code alone. `gateway_timeout -> DEFER_RETRY` is the natural
+judgment call a naive, ML-free rule-writer would make ("this reads like a
+network hiccup") — and it is exactly what makes this baseline unsafe on
+the `WEBHOOK_AMBIGUITY` share of that code. That risk is intentional, not
+a bug in the baseline's design.
+
+### Guardian state isolation (Day 9 spec section 10A)
+
+Guardian's real production path (`src/pipeline/pipeline.py`) writes to
+`idempotency_log`, `payment_events`, `decisions`, and `recovery_outcomes`.
+Day 9 evaluates the same transactions repeatedly (primary run,
+sensitivity seeds, cross-process reruns) — if any of those writes
+persisted, a later evaluation could see a stale "already executed" record
+and be forced into `HUMAN_REVIEW` for reasons having nothing to do with
+evidence, model, policy, or seed.
+
+**Option A was used**: `GuardianStrategy` calls the real feature
+builder, the real `CalibratedRootCauseClassifier`, and the real
+`RulesPolicyEngine.decide()` directly — with `already_executed_actions=
+frozenset()` and a fixed `now` (`EXPERIMENT_EVALUATION_TIME`, a constant,
+never wall-clock) — bypassing **only** the persistence/audit/idempotency-
+write layer. Feature construction, calibrated prediction, confidence
+thresholds, and every Day 7 safety guard are byte-for-byte identical to
+production. Production's real idempotency/cooldown behavior was **not**
+modified, weakened, or disabled — `src/pipeline/pipeline.py` and
+`src/policy/engine.py` are untouched by Day 9 (verified via `git diff`).
+Verified directly: calling `GuardianStrategy.select_action` twice
+sequentially for the same transaction returns the same action, and a
+fresh `GuardianStrategy` instance produces the same action as a previous
+one for the same transaction.
+
+### Dataset
+
+The existing frozen **15% test split** (242 rows) —
+`src.model.splitting.train_val_test_split(random_state=42)`, the exact
+same split Day 4/5 already evaluated the classifier against. Frozen
+*before* the experiment ran (`experiments/day9_experiment_config.yaml`).
+Rationale: Day 9 measures policy/outcome behavior downstream of the
+already-frozen classifier, not classifier generalization — reusing the
+established held-out split avoids introducing a new, undocumented subset
+choice.
+
+### Money definitions and precision
+
+- **Simulated amount recovered** — the sum of realized, common-random
+  `estimate_outcome()` draws. This is the primary recovery metric.
+- **Expected amount recovered** — `amount × probability_of_recovery(...)`,
+  a probability-weighted estimate exposed separately by Day 8. Reported as
+  supplementary only, never merged with simulated recovery.
+- No repository-wide currency/rounding convention was found (audited
+  `src/domain/`, `src/db.py`, existing money tests, `docs/`, config
+  files). Day 9 explicitly defines its own comparison tolerance:
+  **`1e-2`** (documented in `experiments/day9_experiment_config.yaml` and
+  `tests/test_experiment_metrics.py` — not claimed as a pre-existing
+  repository convention).
+
+### Fairness verification
+
+Machine-checked (`tests/test_experiment_crn.py`,
+`tests/test_experiment_metrics.py`): same evidence object across all four
+strategies (root_cause, probability, amount identical), same transaction
+set per strategy, same `estimate_outcome`, same derived seed, same
+simulation configuration — only action-selection logic differs.
+
+### Synthetic assumption disclosure
+
+Every recovery/duplicate-charge probability driving these results is a
+**Day 8 synthetic simulation assumption**, not an observed Razorpay
+production statistic (there are none anywhere in this repository). The
+Day 9 results demonstrate **comparative behavior under the configured
+counterfactual environment** — they are not, and must never be reported
+as, real recovered revenue. Real production outcome data would require
+recalibrating the Day 8 simulation assumptions before these comparisons
+would carry production meaning.
+
+### Reproducibility
+
+Verified twice: (1) the identical experiment, run as two **separate shell
+processes** with `--seed 42`, produced byte-identical output files
+(confirmed via `diff` and matching MD5 checksums); (2) three predeclared
+seeds (42 primary, 43/44 sensitivity) each individually reproduce
+identically across repeated runs. See `experiments/run_day9_experiment.py`
+and `experiments/day9_experiment_config.yaml`.
+
+### Limitations
+
+- All outcome probabilities remain Day 8's synthetic assumptions —
+  unchanged, unrecalibrated, and explicitly disclosed as such everywhere
+  results are reported.
+- Guardian's lower raw recovery rate on `INFRASTRUCTURE` and its zero
+  recovery on `OTP_TIMEOUT`/`USER_ABANDONMENT` (both intentional
+  consequences of its confidence threshold and its Day 7 `NO_ACTION`
+  mapping for those two classes) are genuine, measured trade-offs against
+  the naive/rules-only baselines' higher raw recovery on those same
+  segments — not concealed.
+- Statistical significance testing is explicitly **out of scope** for Day
+  9 (Day 10 work) — only absolute/relative differences are reported here.
+- No frontend, dashboard, Razorpay adapter, or LLM component was touched
+  or built.

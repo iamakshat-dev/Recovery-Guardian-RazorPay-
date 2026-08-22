@@ -35,6 +35,12 @@ class RecoveryEvidence:
     probability: float  # the calibrated classifier's confidence in root_cause
     retry_count: int = 0
     incident_active: bool = False
+    # Added Day 9: the rules-only baseline strategy (src/experiment/
+    # strategies.py) needs failure_code, and the Day 9 spec explicitly
+    # says it "may be available to all strategies." Additive, defaulted,
+    # backward compatible — does not change estimate_outcome()'s logic at
+    # all (Day 8's outcome model never reads failure_code).
+    failure_code: str = ""
 
     @classmethod
     def from_payment_event_and_prediction(
@@ -51,4 +57,5 @@ class RecoveryEvidence:
             probability=prediction.probability,
             retry_count=payment_event.retry_count,
             incident_active=payment_event.incident_active,
+            failure_code=payment_event.failure_code,
         )
