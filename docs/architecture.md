@@ -455,3 +455,374 @@ and `experiments/day9_experiment_config.yaml`.
   9 (Day 10 work) — only absolute/relative differences are reported here.
 - No frontend, dashboard, Razorpay adapter, or LLM component was touched
   or built.
+
+---
+
+## Day 10 — Frozen Experiment Analysis
+
+Day 10 is analysis-only: it reads the frozen Day 9 result artifacts
+(`experiments/results/day9_seed_{42,43,44}_per_transaction.json`) and
+never reruns the experiment or touches Day 9/8/7/ML code
+(`src/analysis/`, read-only by construction — verified via `git diff`).
+
+### Methodology and metric definitions
+
+**`recovery_rate`** is explicitly **count-based**:
+`recovered_transaction_count / transactions_evaluated` — *not*
+`amount_recovered / amount_at_risk`. This was the Day 9 definition
+already in use; Day 10 only makes it explicit in writing.
+
+**Taxonomy preserved throughout**: OBSERVED (an actual recorded payment
+outcome — the project has none), EXPECTED
+(`amount × probability_of_recovery`, a Day 8 probability-weighted
+estimate), SIMULATED (one realized `estimate_outcome()` draw — what every
+number below actually is). *"Guardian recovered ₹193,316.24" means
+simulated/counterfactual recovery under the configured environment — it
+does not mean Razorpay recovered that amount.*
+
+### Data integrity (verified, `src/analysis/integrity.py`)
+
+For all three seeds: action counts sum to 242 per strategy; every
+`0 ≤ amount_recovered ≤ transaction_amount`; per-strategy root-cause
+recovery sums equal the strategy total; total recovered never exceeds
+total at risk. All checks passed — no discrepancy required investigation.
+
+### Table A — Primary comparison (seed 42, n=242)
+
+| Metric | Naive Retry | Rules-only | Guardian | No Action |
+|---|---:|---:|---:|---:|
+| Transactions | 242 | 242 | 242 | 242 |
+| Amount at risk | ₹677,213.78 | ₹677,213.78 | ₹677,213.78 | ₹677,213.78 |
+| Simulated amount recovered | ₹205,427.28 | ₹238,230.16 | ₹193,316.24 | ₹0.00 |
+| Recovery rate (count-based) | 29.75% | 33.88% | 28.93% | 0.00% |
+| Duplicate-charge risk | 12 | 3 | **0** | 0 |
+| Unsafe outcomes | 12 | 3 | **0** | 0 |
+
+**Guardian did NOT achieve the highest raw simulated recovery.**
+Rules-only did (₹238,230.16). This is stated plainly, not minimized: the
+claim *"Guardian maximizes recovery"* is false on this frozen result and
+must never be made. The defensible claim is: **Guardian is a
+safety-constrained recovery strategy** — its distinguishing, reproduced
+property is **zero duplicate-charge-risk outcomes across all three
+seeds**, while both higher-recovery active strategies incurred measurable
+risk.
+
+### Recovery and safety differences (Guardian vs. each baseline, seed 42)
+
+| Comparison | Recovery Δ (₹) | Recovery-rate Δ (pp) | Duplicate-risk Δ |
+|---|---:|---:|---:|
+| Guardian − Naive | −12,111.04 | −0.82 | −12 |
+| Guardian − Rules-only | −44,913.92 | −4.95 | −3 |
+| Guardian − No Action | +193,316.24 | +28.93 | 0 |
+
+Guardian recovers less than both active baselines in raw ₹ terms, and
+strictly more than doing nothing, while carrying zero of either
+baseline's duplicate-charge exposure.
+
+### Safety-constrained interpretation
+
+If the objective were *raw simulated recovery without safety
+constraints*, **Rules-only performed best** in this experiment — this is
+not a euphemism, it is the measured result. Rules-only is not "bad": it
+achieves strong recovery on several classes but still incurs risk because
+`failure_code` alone cannot resolve ambiguous payment-state cases.
+Guardian is not "best overall" in an unqualified sense: it is best under
+the objective *maximum recoverable revenue subject to explicit safety
+constraints* — a different, narrower, and explicitly stated objective.
+
+### WEBHOOK_AMBIGUITY deep dive (Table G)
+
+25 transactions, ₹63,716.20 at risk.
+
+| Strategy | Action | Txns | At Risk | Recovered | Recovery Rate | Duplicate Risk |
+|---|---|---:|---:|---:|---:|---:|
+| Naive Retry | DEFER_RETRY | 25 | ₹63,716.20 | ₹45,875.80 | 68.00% | 12 |
+| Rules-only | DEFER_RETRY (9) / HUMAN_REVIEW (16) | 25 | ₹63,716.20 | ₹17,645.09 | 20.00% | 3 |
+| **Guardian** | **BLOCK_RECONCILE (25/25 — measured, not asserted)** | 25 | ₹63,716.20 | ₹0.00 | 0.00% | **0** |
+| No Action | NO_ACTION | 25 | ₹63,716.20 | ₹0.00 | 0.00% | 0 |
+
+Guardian's action distribution within these 25 transactions was measured
+directly from the frozen per-transaction results: **25/25 BLOCK_RECONCILE,
+0/25 anything else.** WEBHOOK_AMBIGUITY represents unresolved payment
+state; retrying can create duplicate-charge exposure if the original
+payment actually succeeded. Guardian's zero recovery here is an
+**intentional policy consequence** (the Day 7 hard safety invariant), not
+a model failure — it is buying zero-risk at the cost of all recovery on
+this segment.
+
+### INFRASTRUCTURE deep dive (Table C, one segment)
+
+55 transactions, ₹143,862.56 at risk.
+
+| Strategy | Recovered | Recovery Rate | Duplicate Risk |
+|---|---:|---:|---:|
+| Naive Retry | 34/55 (₹89,184.69) | 61.82% | 0 |
+| Rules-only | 34/55 (₹89,184.69) | 61.82% | 0 |
+| Guardian | 27/55 (₹61,915.86) | 49.09% | 0 |
+
+**Proved from the action distribution, not merely asserted.** Guardian's
+measured actions on these 55 transactions: **DEFER_RETRY = 43,
+HUMAN_REVIEW = 12** (43 + 12 = 55). Naive and Rules-only both select
+`DEFER_RETRY` unconditionally for every one of the 55 — no confidence
+gate. Guardian's Day 7 policy only authorizes `DEFER_RETRY` when
+calibrated confidence ≥ 0.75; the 12 lower-confidence `INFRASTRUCTURE`
+predictions instead receive `HUMAN_REVIEW`, which credits **zero**
+recovery in this simulation. That gap — 12 transactions receiving no
+recovery credit instead of a `DEFER_RETRY` attempt — is the entire
+arithmetic explanation for Guardian's 27 vs. 34 recovered count
+(34 − 27 = 7 fewer *recoveries*, consistent with 12 fewer *attempts* at
+Day 8's ~0.70 configured DEFER_RETRY-on-INFRASTRUCTURE recovery
+probability: 12 × 0.70 ≈ 8.4, in the same range as the observed 7-recovery
+gap, allowing for CRN sampling variation over 55 draws).
+
+### CARD_DECLINE + INSUFFICIENT_FUNDS combined analysis (Table F)
+
+99 of 242 transactions (**40.9%** of the evaluation set) — a major
+portion of the experiment, analyzed together as instructed.
+
+| Strategy | Txns | At Risk | Recovered | Recovery Rate | Action Pattern |
+|---|---:|---:|---:|---:|---|
+| Naive Retry | 99 | ₹292,408.37 | ₹12,678.86 | 9.09% | 99× `DEFER_RETRY` |
+| Rules-only | 99 | ₹292,408.37 | ₹131,400.38 | 43.43% | 99× `CUSTOMER_RECOVERY` |
+| Guardian | 99 | ₹292,408.37 | ₹131,400.38 | 43.43% | 98× `CUSTOMER_RECOVERY`, 1× `HUMAN_REVIEW` |
+| No Action | 99 | ₹292,408.37 | ₹0.00 | 0.00% | 99× `NO_ACTION` |
+
+**Naive's action-mismatch finding (mandatory, distinct from the safety
+story):** on this 99-transaction segment, Naive recovers roughly **1/10th**
+of what Guardian/Rules-only recover — not because of any safety exposure
+(0 duplicate risk here for all four strategies), but because `DEFER_RETRY`
+is the wrong action for these two root causes.
+
+Day 8's frozen `simulation_config.yaml` (unmodified, cited directly, not
+invented): `recovery_probability.DEFER_RETRY.default = 0.15` (the rate
+applied to `CARD_DECLINE`/`INSUFFICIENT_FUNDS` under `DEFER_RETRY`, since
+neither is listed under that action's table) vs.
+`recovery_probability.CUSTOMER_RECOVERY.CARD_DECLINE = 0.55` and
+`.INSUFFICIENT_FUNDS = 0.45`. The observed rates track these configured
+assumptions closely, within the sampling variation expected at n=52/47:
+`CARD_DECLINE` — Naive 5/52 = 9.6% (config: 15%), Guardian/Rules 25/52 =
+48.1% (config: 55%); `INSUFFICIENT_FUNDS` — Naive 4/47 = 8.5% (config:
+15%), Guardian/Rules 18/47 = 38.3% (config: 45%).
+
+**Conclusion: Naive Retry is not merely riskier than Rules-only — it is
+also less effective on 40.9% of the dataset because blanket `DEFER_RETRY`
+is a poor action for `CARD_DECLINE`/`INSUFFICIENT_FUNDS`, where
+`CUSTOMER_RECOVERY` is markedly more effective under the configured
+simulation. Aggression is not the same as effectiveness.**
+
+### CRN validation signals (architecture-validation, not findings about strategy quality)
+
+**Signal 1** — `CARD_DECLINE`: Rules-only = Guardian = ₹86,924.28 exactly.
+`INSUFFICIENT_FUNDS`: Rules-only = Guardian = ₹44,476.10 exactly. Both
+strategies select the same effective action (`CUSTOMER_RECOVERY`, for the
+51/52 and 47/47 rows where Guardian doesn't fall back to `HUMAN_REVIEW`)
+on these transactions, and produce byte-identical simulated recovery —
+proof that the same evidence + same action + same common random draw
+yields the same outcome, exactly as the shared environment requires.
+
+**Signal 2** — `INFRASTRUCTURE`: Naive = Rules-only = ₹89,184.69 exactly.
+Both select `DEFER_RETRY` unconditionally for all 55 transactions in this
+segment and produce identical simulated recovery under the shared seed.
+
+These identical results are validation evidence for the experiment's
+architecture, not bugs or coincidences.
+
+### Guardian action distribution (Table E, n=242)
+
+| Action | Count | Percentage |
+|---|---:|---:|
+| CUSTOMER_RECOVERY | 98 | 40.5% |
+| NO_ACTION | 63 | 26.0% |
+| DEFER_RETRY | 43 | 17.8% |
+| BLOCK_RECONCILE | 25 | 10.3% |
+| HUMAN_REVIEW | 13 | 5.4% |
+| **Total** | **242** | **100%** |
+
+By root cause (fully reconciles against the table above): `INFRASTRUCTURE`
+→ 43 `DEFER_RETRY` + 12 `HUMAN_REVIEW` (55); `WEBHOOK_AMBIGUITY` → 25
+`BLOCK_RECONCILE` (25); `CARD_DECLINE` → 51 `CUSTOMER_RECOVERY` + 1
+`HUMAN_REVIEW` (52); `INSUFFICIENT_FUNDS` → 47 `CUSTOMER_RECOVERY` (47);
+`OTP_TIMEOUT` → 31 `NO_ACTION` (31); `USER_ABANDONMENT` → 32 `NO_ACTION`
+(32).
+
+### Table C — Full root-cause comparison (seed 42)
+
+| Root Cause | Strategy | Txns | At Risk | Recovered | Recovery Rate | Duplicate Risk |
+|---|---|---:|---:|---:|---:|---:|
+| CARD_DECLINE | Naive / Rules / Guardian / NoAction | 52 | ₹196,131.84 | 3,683 / 86,924 / 86,924 / 0 | 9.6% / 48.1% / 48.1% / 0% | 0/0/0/0 |
+| INSUFFICIENT_FUNDS | same order | 47 | ₹96,276.53 | 8,995 / 44,476 / 44,476 / 0 | 8.5% / 38.3% / 38.3% / 0% | 0/0/0/0 |
+| OTP_TIMEOUT | same order | 31 | ₹76,940.59 | 20,740 / 0 / 0 / 0 | 16.1% / 0% / 0% / 0% | 0/0/0/0 |
+| USER_ABANDONMENT | same order | 32 | ₹100,286.06 | 36,948 / 0 / 0 / 0 | 21.9% / 0% / 0% / 0% | 0/0/0/0 |
+| INFRASTRUCTURE | same order | 55 | ₹143,862.56 | 89,185 / 89,185 / 61,916 / 0 | 61.8% / 61.8% / 49.1% / 0% | 0/0/0/0 |
+| WEBHOOK_AMBIGUITY | same order | 25 | ₹63,716.20 | 45,876 / 17,645 / 0 / 0 | 68% / 20% / 0% / 0% | 12/3/**0**/0 |
+
+`OTP_TIMEOUT`/`USER_ABANDONMENT` are not hidden: Guardian and Rules-only
+both forfeit all recovery there (Guardian's documented Day 7 `NO_ACTION`
+assumption for these two classes; Rules-only routes them to
+`HUMAN_REVIEW`), while Naive picks up modest recovery blindly — a genuine
+trade-off, reported honestly.
+
+### Seed sensitivity (Table D, predeclared seeds only — no cherry-picking)
+
+| Seed | Strategy | Recovery | Recovery Rate | Duplicate Risk |
+|---:|---|---:|---:|---:|
+| 42 | Naive | ₹205,427.28 | 29.75% | 12 |
+| 42 | Rules-only | ₹238,230.16 | 33.88% | 3 |
+| 42 | Guardian | ₹193,316.24 | 28.93% | **0** |
+| 43 | Naive | ₹168,554.05 | 31.82% | 5 |
+| 43 | Rules-only | ₹175,672.81 | 33.06% | 1 |
+| 43 | Guardian | ₹151,387.84 | 27.69% | **0** |
+| 44 | Naive | ₹173,330.03 | 30.17% | 10 |
+| 44 | Rules-only | ₹239,307.76 | 36.36% | 2 |
+| 44 | Guardian | ₹186,728.41 | 29.34% | **0** |
+
+**Guardian's duplicate-charge-risk count is 0 across all three predeclared
+seeds** — the one property that does not vary. Recovery varies
+(₹151k–₹193k for Guardian, reflecting ordinary CRN sampling variation,
+not a change in policy or strategy).
+
+### Statistical analysis
+
+**Seed-level (n=3): no formal significance test performed.** Three
+observations cannot support one — reporting only qualitative range
+(above) as instructed.
+
+**Transaction-level paired analysis (seed 42, n=242 identical
+transactions under every strategy — a paired design, McNemar/Wilcoxon
+appropriate):**
+
+#### Table H — McNemar (binary recovery) and Wilcoxon (monetary) paired comparisons
+
+| Comparison | Both Recovered | Both Not Recovered | A-only (Guardian) | B-only | Concordant N | Discordant N | McNemar stat | McNemar p | Wilcoxon p |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Guardian vs Naive | 36 | 136 | 34 | 36 | 172 | **70** | 34 | 0.9050 | 0.9370 |
+| Guardian vs Rules-only | 70 | 160 | 0 | 12 | 230 | **12** | 0 | 0.00049 | 0.00222 |
+| Guardian vs No Action | 0 | 172 | 70 | 0 | 172 | **70** | 0 | 1.69e-21 | 3.56e-13 |
+
+**Interpretation, exactly as measured — no overclaiming:**
+
+- **Guardian vs. Naive: NOT statistically significant** (p=0.905 McNemar,
+  p=0.937 Wilcoxon). Despite Naive's unsafe behavior, the paired
+  transaction-level recovery difference between Guardian and Naive is not
+  distinguishable from chance at this sample size (70 discordant pairs,
+  nearly evenly split 34 vs. 36).
+- **Guardian vs. Rules-only: statistically significant** (p=0.00049
+  McNemar, p=0.00222 Wilcoxon) — and the direction is unambiguous: of the
+  12 discordant pairs, Guardian recovered **zero** transactions Rules-only
+  didn't, while Rules-only recovered **12** transactions Guardian didn't
+  (`a_only_recovered=0`). Every discordant pair favors Rules-only.
+- **Guardian vs. No Action: statistically significant** (p=1.69e-21
+  McNemar, p=3.56e-13 Wilcoxon) — Guardian recovers meaningfully more than
+  doing nothing.
+
+**Why the effective discordant sample is smaller than 242, and what that
+does and does not mean (mandatory disclosure):** Guardian vs. Rules-only
+has only 12 discordant pairs out of 242 because **230 transactions are
+concordant** — largely explained by CRN Validation Signal 1
+(`CARD_DECLINE`/`INSUFFICIENT_FUNDS`: identical action, identical outcome
+for both strategies on 98 of those 99 rows). McNemar's test is driven
+entirely by discordant pairs; concordant pairs do not count as evidence
+for either direction, but they are not wasted or ignored — they
+positively confirm the two strategies behaved identically there, which is
+itself the CRN validation signal. **A small discordant N with a
+significant p-value is not evidence that the ₹44,913.92 aggregate
+monetary difference (Table A) doesn't exist — the two analyses answer
+different questions** (paired binary recovery disagreement vs. aggregate
+₹ comparison), and here they agree: the discordant pairs are concentrated
+almost entirely in `WEBHOOK_AMBIGUITY` (where Guardian blocks and
+Rules-only sometimes doesn't), consistent with the WEBHOOK_AMBIGUITY deep
+dive above.
+
+No test result here was omitted, rerun, or suppressed regardless of
+significance.
+
+### Business interpretation
+
+The business problem is **recovering revenue without causing unsafe
+payment actions** — not maximizing recovery at any cost.
+
+- **Naive Retry**: attempts recovery on every transaction regardless of
+  action appropriateness. Produces *both* the highest safety exposure
+  *and* lower aggregate recovery than Rules-only — aggression is not
+  effectiveness.
+- **Rules-only**: produced the **highest raw simulated recovery** in this
+  experiment. It still incurs duplicate-charge risk because `failure_code`
+  alone cannot resolve `WEBHOOK_AMBIGUITY`/`INFRASTRUCTURE` overlap.
+- **Guardian**: produced **lower raw simulated recovery** than both active
+  baselines. It enforces explicit safety boundaries and produced **zero**
+  simulated duplicate-charge risk across all three tested seeds.
+- **No Action**: the safest possible lower-bound baseline; recovers
+  nothing.
+
+**Central principle: maximum recoverable revenue *subject to* safety
+constraints** — not "maximum recovery," full stop.
+
+### Judge-facing questions
+
+**Q: Why trust Guardian if it recovered less?**
+A: Guardian is not optimized for unconstrained recovery. It separates
+diagnosis from action and deliberately blocks ambiguous payment-state
+cases where retrying can create duplicate-charge exposure — measured at
+zero duplicate-risk outcomes across three seeds, at a measured cost in
+raw recovery.
+
+**Q: Why did Rules-only recover more?**
+A: In this synthetic experiment, Rules-only selected effective recovery
+actions (`CUSTOMER_RECOVERY`) for `CARD_DECLINE`/`INSUFFICIENT_FUNDS` —
+identically to Guardian on those classes (CRN Signal 1) — but it still
+lacks the ML-based root-cause distinction needed to safely resolve
+`gateway_timeout`'s overlap between `INFRASTRUCTURE` and
+`WEBHOOK_AMBIGUITY`, so it retries some `WEBHOOK_AMBIGUITY` cases Guardian
+blocks.
+
+**Q: Why did Naive recover less despite retrying everything?**
+A: Blanket `DEFER_RETRY` is not an effective action for every failure
+type. `CARD_DECLINE`/`INSUFFICIENT_FUNDS` are 99 of 242 transactions
+(40.9%), and `CUSTOMER_RECOVERY` recovers roughly 4-5× more of that
+segment than `DEFER_RETRY` under the frozen simulation assumptions.
+
+**Q: Why does Guardian recover zero on WEBHOOK_AMBIGUITY?**
+A: The payment state is unresolved. Guardian maps it to `BLOCK_RECONCILE`
+rather than risking a duplicate charge through retry — measured at 25/25
+transactions, not merely asserted.
+
+**Q: If Guardian and Rules-only have identical results on many rows, what
+does McNemar's test actually tell you?**
+A: McNemar's test uses only the 12 discordant paired outcomes here. The
+230 concordant rows still validate that both strategies behaved
+identically on those transactions (a CRN architecture check), but they
+don't add statistical weight to either direction — so the effective
+discordant sample (12) is reported explicitly alongside the p-value,
+never just "n=242."
+
+**Q: Is this real Razorpay recovery?**
+A: No. The recovery environment is synthetic/counterfactual (Day 8). The
+experiment demonstrates comparative architecture and policy behavior.
+Real production deployment would require real labeled outcome data and
+recalibration of the simulation assumptions.
+
+### Limitations
+
+- All recovery/duplicate-charge probabilities remain Day 8's
+  unrecalibrated synthetic assumptions — no real Razorpay recovery labels
+  exist anywhere in this project.
+- Results are counterfactual/simulated throughout, never observed
+  production revenue.
+- Only three sensitivity seeds were run (predeclared); no formal
+  seed-level significance testing was performed or is claimed (n=3 is
+  insufficient).
+- Transaction-level paired tests (McNemar, Wilcoxon) were used only where
+  their assumptions held (paired binary/continuous outcomes on the same
+  242 transactions); the McNemar effective discordant sample is
+  frequently much smaller than 242 due to concordant ties, reported
+  explicitly for every comparison.
+- `recovery_rate` is count-based (`recovered_transaction_count /
+  transactions_evaluated`), not amount-weighted — stated explicitly to
+  avoid ambiguity.
+- Guardian's lower raw recovery on `INFRASTRUCTURE`/`OTP_TIMEOUT`/
+  `USER_ABANDONMENT` and Rules-only's higher raw recovery overall are
+  reported as genuine, measured findings — not smoothed over.
+- Statistical significance (where found) is not equivalent to production
+  validity — no deployment claim is made from this analysis.
+- No new model, policy, threshold, or business logic was introduced; Day
+  10 is read-only analysis over frozen Day 9 artifacts.

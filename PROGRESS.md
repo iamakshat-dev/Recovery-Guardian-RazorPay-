@@ -439,3 +439,70 @@ synthetic assumptions, not observed Razorpay revenue.**
 - No statistical significance testing performed (explicitly Day 10 work).
 - Day 10 will separately analyze and interpret these frozen results —
   not started.
+
+## Day 10 — Frozen experiment analysis
+
+Baseline before this pass: 182 passed, working tree clean at `de0dbb1`.
+Analysis-only: reads the frozen Day 9 result artifacts, never reruns the
+experiment, never touches ML/calibration/policy/simulator/dataset/Day 9
+strategy or configuration code (verified via `git diff`).
+
+- **`recovery_rate` explicitly defined**: count-based
+  (`recovered_transaction_count / transactions_evaluated`), not
+  amount-weighted — documented in `docs/architecture.md`.
+- **Data integrity verified** (`src/analysis/integrity.py`) for all three
+  seeds: action counts sum to 242, per-transaction amount bounds hold,
+  root-cause sums reconcile to strategy totals, total recovered never
+  exceeds total at risk. All checks passed.
+- `src/analysis/`: `loader.py` (reads frozen JSON only), `segments.py`
+  (root-cause / action-distribution aggregation), `statistics.py`
+  (exact McNemar via `scipy.stats.binomtest`, Wilcoxon signed-rank via
+  `scipy.stats.wilcoxon`).
+- `experiments/run_day10_analysis.py`: orchestrates the above over the
+  frozen seed 42/43/44 artifacts, writes `experiments/results/
+  day10_analysis.json` and 7 plots (all gitignored, reproducible via the
+  script). Added `scipy` to `requirements.txt` (now used directly).
+- Test count: 182 → 192 passed (10 new, `tests/test_day10_analysis.py`,
+  hand-built synthetic fixtures independent of the real frozen data).
+
+### Major findings (see `docs/architecture.md`'s Day 10 section for full detail)
+
+1. **Guardian did NOT achieve the highest raw simulated recovery.**
+   Rules-only did (₹238,230.16 vs. Guardian's ₹193,316.24, seed 42). This
+   is stated plainly — the claim "Guardian maximizes recovery" is false
+   and is never made. Guardian's reproduced distinguishing property is
+   **zero duplicate-charge-risk outcomes across all three seeds** (42,
+   43, 44), vs. Naive's 5–12 and Rules-only's 1–3.
+2. **Naive action-mismatch finding**: on the 99 `CARD_DECLINE`/
+   `INSUFFICIENT_FUNDS` transactions (40.9% of the dataset), Naive
+   recovers only ₹12,678.86 (9.09%) vs. Guardian/Rules-only's identical
+   ₹131,400.38 (43.43%) — driven by `DEFER_RETRY` being a poor action for
+   these classes under Day 8's frozen simulation assumptions
+   (`DEFER_RETRY.default=0.15` vs. `CUSTOMER_RECOVERY.CARD_DECLINE=0.55`/
+   `.INSUFFICIENT_FUNDS=0.45`), not by any safety exposure (0 duplicate
+   risk here for all strategies). **Aggression ≠ effectiveness.**
+3. **Two independent CRN validation signals** confirmed the shared
+   environment/common-random-number architecture: identical actions on
+   identical evidence produced byte-identical simulated recovery
+   (`CARD_DECLINE`/`INSUFFICIENT_FUNDS`: Rules-only = Guardian exactly;
+   `INFRASTRUCTURE`: Naive = Rules-only exactly).
+4. **Paired statistical analysis** (seed 42, n=242, McNemar + Wilcoxon):
+   Guardian vs. Naive — **not significant** (p=0.905/0.937); Guardian vs.
+   Rules-only — **significant** (p=0.00049/0.00222), all 12 discordant
+   pairs favoring Rules-only; Guardian vs. No Action — **significant**
+   (p=1.7e-21/3.6e-13). The Guardian-vs-Rules-only discordant sample (12
+   of 242) is explicitly reported as smaller than the full n, explained
+   by 230 concordant rows (largely the CRN Signal 1 ties) — not treated
+   as evidence the aggregate ₹ difference doesn't exist.
+- Seed-level (n=3) results reported qualitatively only — no formal
+  significance test performed, as instructed (n=3 is insufficient).
+
+### Known limitations (Day 10)
+
+- All findings are counterfactual/simulated (Day 8 synthetic
+  assumptions) — never claimed as observed Razorpay revenue.
+- Statistical significance (where found) is not equivalent to production
+  validity.
+- Guardian's lower raw recovery and Rules-only's higher raw recovery are
+  reported as genuine findings, not smoothed over.
+- No new model, policy, threshold, or strategy was introduced.
