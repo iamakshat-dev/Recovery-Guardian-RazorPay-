@@ -49,9 +49,20 @@ ID_COL = "transaction_id"
 def _one_hot(series: pd.Series, categories: list, prefix: str) -> pd.DataFrame:
     """One-hot encode against a FIXED category list (not series.unique()),
     so unseen/out-of-vocabulary values at inference time produce an
-    all-zero row instead of crashing or silently shifting column order."""
+    all-zero row instead of crashing or silently shifting column order.
+
+    `pd.get_dummies` on a bare `pd.Categorical` (rather than a `pd.Series`)
+    returns a fresh, default 0-based RangeIndex — NOT the original series'
+    index. Re-wrapping it as a Series with `index=series.index` before
+    calling `build_features` on any input whose index is not already a
+    contiguous 0-based range (e.g. `df.iloc[[3]]`, or any filtered/sampled
+    sub-batch) previously caused the later `pd.concat` in build_features to
+    align by index, silently filling every one-hot column with NaN for
+    every row whose index didn't happen to match. Training and the
+    production single-transaction inference path were unaffected only by
+    coincidence — both always pass a fresh, contiguous-index DataFrame."""
     cat_series = pd.Categorical(series, categories=categories)
-    dummies = pd.get_dummies(cat_series, prefix=prefix)
+    dummies = pd.get_dummies(pd.Series(cat_series, index=series.index), prefix=prefix)
     # Ensure every expected column exists even if this batch didn't contain
     # every category (important for small ad-hoc single-row inputs).
     expected_cols = [f"{prefix}_{c}" for c in categories]

@@ -129,3 +129,33 @@ def test_high_retry_count_and_extreme_amount_do_not_break_transforms():
     out = build_features(df)
     assert np.isfinite(out.loc[0, "amount_log"])
     assert out.loc[0, "retry_count"] == 50
+
+
+def test_build_features_is_robust_to_non_contiguous_input_index():
+    """Regression test (found during the Day 4 ML audit): `_one_hot` used
+    to call `pd.get_dummies` on a bare `pd.Categorical` rather than a
+    `pd.Series`, which returns a fresh, default 0-based index decoupled
+    from the input DataFrame's real index. build_features's internal
+    `pd.concat` then aligns by index, so any input whose index isn't
+    already a contiguous 0-based range (e.g. a filtered/sampled sub-batch
+    such as `raw_df.iloc[[3, 7, 100]]`) silently produced NaN in every
+    one-hot column. Training and the production single-transaction
+    inference path happened to never trigger this only because both
+    always build features on a freshly-indexed DataFrame — this must never
+    silently reappear for any other caller (e.g. a future batch/evaluation
+    path)."""
+    df = pd.DataFrame(
+        [
+            make_row(transaction_id="txn_a", failure_code="internal_error"),
+            make_row(transaction_id="txn_b", failure_code="otp_timeout"),
+            make_row(transaction_id="txn_c", failure_code="user_cancelled"),
+        ],
+        index=[3, 7, 100],  # deliberately non-contiguous, non-zero-based
+    )
+
+    out = build_features(df)
+
+    assert out[FEATURE_COLUMNS].isnull().sum().sum() == 0
+    assert out.loc[3, "failure_code_internal_error"] == 1
+    assert out.loc[7, "failure_code_otp_timeout"] == 1
+    assert out.loc[100, "failure_code_user_cancelled"] == 1
