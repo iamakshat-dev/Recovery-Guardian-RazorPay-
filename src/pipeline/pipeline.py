@@ -34,6 +34,16 @@ read before deciding, and any newly-authorized automated action is
 recorded afterward, all on the same connection/transaction as the rest of
 this pipeline run.
 
+Day 8 update: after the Day 7-authorized action is decided, this pipeline
+calls the shared counterfactual estimator
+(src/recovery/simulator.py::estimate_outcome) with EXACTLY that authorized
+action — never a hypothetical one — and persists the resulting
+RecoveryOutcome via the existing recovery_outcomes table. Day 8's
+estimator has no knowledge of PolicyDecision and cannot itself choose an
+action; only this pipeline (i.e. Day 7's policy output) decides which
+action gets scored. The same estimator is reused unmodified by Day 9/10 to
+score purely hypothetical actions for the naive/rules-only baselines.
+
 The Day 3 policy placeholder and the Day 4 raw classifier both remain in
 the codebase, fully intact and independently loadable, as
 reference/comparison fixtures — neither was modified to make these swaps.
@@ -46,13 +56,15 @@ from uuid import uuid4
 
 import pandas as pd
 
-from src.audit.logger import persist_decision_record
+from src.audit.logger import persist_decision_record, persist_recovery_outcome
 from src.db import SCHEMA, get_connection
 from src.domain.models import DecisionRecord, PaymentEvent
 from src.features.build_features import build_features
 from src.model.calibrated_classifier import CalibratedRootCauseClassifier
 from src.policy.engine import AUTOMATED_ACTIONS, RulesPolicyEngine
 from src.policy.idempotency import get_recorded_actions, record_action
+from src.recovery.evidence import RecoveryEvidence
+from src.recovery.simulator import estimate_outcome
 
 
 def run_pipeline(
@@ -74,8 +86,8 @@ def run_pipeline(
 
     Returns:
         The full DecisionRecord: event, prediction, policy decision, and
-        (for Day 3) outcome=None — outcome is Day 8-10 (recovery simulator)
-        work and doesn't exist yet.
+        (as of Day 8) a simulated RecoveryOutcome scored by the shared
+        counterfactual estimator against the Day-7-authorized action.
     """
     if not isinstance(event, PaymentEvent):
         raise TypeError(f"run_pipeline requires a PaymentEvent, got {type(event)!r}")
@@ -113,22 +125,31 @@ def run_pipeline(
     if policy_decision.action in AUTOMATED_ACTIONS:
         record_action(conn, event.transaction_id, policy_decision.action)
 
-    # 7. Assemble the audit record.
+    # 7. Score the Day-7-authorized action through the shared Day 8
+    #    counterfactual estimator — never a hypothetical action; this is
+    #    Guardian's real production path, constrained entirely by what
+    #    policy just decided.
+    decision_id = f"dec_{uuid4().hex}"
+    evidence = RecoveryEvidence.from_payment_event_and_prediction(event, prediction)
+    outcome = estimate_outcome(evidence, policy_decision.action, decision_id=decision_id)
+
+    # 8. Assemble the audit record.
     record = DecisionRecord(
-        decision_id=f"dec_{uuid4().hex}",
+        decision_id=decision_id,
         event=event,
         prediction=prediction,
         policy=policy_decision,
-        outcome=None,
+        outcome=outcome,
     )
 
-    # 8. Persist via the existing SQLite schema/connection helper (same
+    # 9. Persist via the existing SQLite schema/connection helper (same
     #    connection already opened above for the idempotency check).
     try:
         persist_decision_record(record, conn)
+        persist_recovery_outcome(outcome, conn)
     finally:
         if owns_conn:
             conn.close()
 
-    # 9. Return the complete result.
+    # 10. Return the complete result.
     return record

@@ -124,6 +124,24 @@ class RecoveryOutcome(BaseModel):
     amount_recovered: float
     decision_id: str
     timestamp: datetime
+    # Added Day 8 (src/recovery/simulator.py). Both are additive with safe
+    # defaults, so nothing that already constructs a RecoveryOutcome (there
+    # is no such caller yet — this model was declared in Day 1 but never
+    # populated until Day 8) breaks.
+    duplicate_charge_risk: bool = Field(
+        default=False,
+        description="True if this simulated outcome carries duplicate-charge "
+        "risk — e.g. a hypothetical retry of an unresolved WEBHOOK_AMBIGUITY "
+        "payment that may have already succeeded. Independent of `recovered`: "
+        "an outcome can be recovered=True and duplicate_charge_risk=True at "
+        "the same time.",
+    )
+    outcome_reason: str = Field(
+        default="",
+        description="Short machine-readable label for why the simulator "
+        "produced this outcome (e.g. 'WEBHOOK_AMBIGUITY_RETRY_DUPLICATE'), "
+        "for audit/debugging — not a substitute for the policy ReasonCode.",
+    )
 
 
 class DecisionRecord(BaseModel):

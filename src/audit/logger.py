@@ -19,7 +19,7 @@ writes of "the same" decision.
 import json
 import sqlite3
 
-from src.domain.models import DecisionRecord
+from src.domain.models import DecisionRecord, RecoveryOutcome
 
 
 def persist_decision_record(record: DecisionRecord, conn: sqlite3.Connection) -> None:
@@ -88,4 +88,35 @@ def persist_decision_record(record: DecisionRecord, conn: sqlite3.Connection) ->
         ),
     )
 
+    conn.commit()
+
+
+def persist_recovery_outcome(outcome: RecoveryOutcome, conn: sqlite3.Connection) -> None:
+    """Persist one RecoveryOutcome (Day 8's shared estimator output) into
+    the existing recovery_outcomes table — reuses the schema/connection
+    exactly as persist_decision_record does; no second persistence
+    mechanism. `recovery_outcomes.transaction_id` is the table's existing
+    PRIMARY KEY (a Day 1/2 schema decision, not changed here), so this
+    uses INSERT OR REPLACE: re-simulating an outcome for a transaction
+    that already has one updates it to the latest, rather than raising a
+    primary-key conflict on Day 3's normal "rerun = new observation"
+    semantics."""
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO recovery_outcomes (
+            transaction_id, decision_id, action_taken, recovered,
+            amount_recovered, timestamp, duplicate_charge_risk, outcome_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            outcome.transaction_id,
+            outcome.decision_id,
+            outcome.action_taken.value,
+            int(outcome.recovered),
+            outcome.amount_recovered,
+            outcome.timestamp.isoformat(),
+            int(outcome.duplicate_charge_risk),
+            outcome.outcome_reason,
+        ),
+    )
     conn.commit()

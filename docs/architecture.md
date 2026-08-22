@@ -147,3 +147,138 @@ python -m src.model.calibrate
 | Day 5 metrics | `experiments/results/evaluation_metrics.json` byte-identical to the frozen file. |
 
 **Verdict: EXACT MATCH** (with the fully-explained, feature-irrelevant `transaction_id` exception above).
+
+---
+
+## Day 8 — Shared Counterfactual Outcome Environment
+
+Day 7's policy engine answers "what are we permitted to do?" This section
+covers Day 8: "if we took action X, what would probably happen?" — the
+shared environment Day 9/10's three-way experiment (naive retry-everything
+vs. rules-only vs. Guardian) will use to score every strategy fairly.
+
+### The shared function
+
+```
+estimate_outcome(evidence: RecoveryEvidence, action: RecoveryAction) -> RecoveryOutcome
+```
+(`src/recovery/simulator.py`). It is deliberately **not** coupled to
+`PolicyDecision` and does not import `src.policy.engine` — it takes a bare
+`RecoveryAction` and evaluates it exactly as given, for any of the five
+values (`DEFER_RETRY`, `CUSTOMER_RECOVERY`, `BLOCK_RECONCILE`,
+`HUMAN_REVIEW`, `NO_ACTION`), regardless of whether Guardian's real policy
+would ever authorize that action for the given evidence.
+
+**Why it accepts hypothetical actions:** Guardian's production pipeline
+(`src/pipeline/pipeline.py`) calls this function with the actual Day
+7-authorized action only — it never asks the estimator to evaluate
+anything else. Day 9/10 will call the exact same function with
+hypothetical actions a naive or rules-only strategy would have chosen
+instead, including ones Guardian's own policy would never authorize (e.g.
+`DEFER_RETRY` on `WEBHOOK_AMBIGUITY` evidence). This is required for a
+fair three-way comparison: scoring what a strategy *would have done* is
+not the same as authorizing it to actually happen, and using a different
+outcome model per strategy would invalidate the comparison entirely.
+There is exactly one outcome mechanism in the codebase — no
+`guardian_outcome_model`, `naive_outcome_model`, or `rules_outcome_model`
+exists or should ever be created.
+
+### Observed vs. expected vs. simulated
+
+- **Observed** — an actual recorded payment outcome. **The project has
+  none.** Audited before building anything: `data/generate_data.py`'s
+  synthetic dataset, the `recovery_outcomes` table, and every other data
+  source were inspected, and none contain action-taken/recovery-success
+  labels. Building a supervised outcome model on fabricated labels was
+  therefore explicitly rejected in favor of a transparent synthetic
+  simulator (`src/recovery/simulation_config.yaml`).
+- **Expected** — a probability-weighted estimate,
+  `amount × probability_of_recovery(evidence, action)`. Exposed as a
+  separate function specifically so it's never confused with a realized
+  outcome.
+- **Simulated** — the single realized `RecoveryOutcome` `estimate_outcome`
+  returns for one (evidence, action, seed) — a Bernoulli draw from a
+  local `random.Random(seed)` instance (never the global `random` module),
+  reproducible by default even with no explicit seed (one is derived
+  deterministically from `transaction_id` + `action`).
+
+**No simulated recovery is ever reported as real revenue.** Nothing in
+this codebase or its documentation claims "₹X was recovered" — only
+simulated/expected/counterfactual recovery.
+
+### Duplicate-charge risk
+
+`RecoveryOutcome.duplicate_charge_risk: bool` (additive field, default
+`False`) represents the downside of unsafe actions, independent of
+`recovered` — an outcome can be `recovered=True` **and**
+`duplicate_charge_risk=True` simultaneously (an unsafe retry can recover
+money while also creating a duplicate charge). Only
+`DEFER_RETRY` on `WEBHOOK_AMBIGUITY` evidence carries nonzero risk in the
+current model: the payment state is genuinely unknown, so retrying might
+be re-charging a payment that already silently succeeded. This is
+governed by two **explicit, synthetic, documented simulation
+assumptions** in `simulation_config.yaml` (not observed statistics):
+
+| Assumption | Value | Meaning |
+|---|---|---|
+| `original_payment_already_succeeded_probability` | 0.40 | P(the unresolved payment had already succeeded) |
+| `genuine_retry_success_probability` | 0.50 | P(a retry succeeds, given the original genuinely failed) |
+
+If the original had already succeeded, the "retry" trivially succeeds
+again — recovering nothing new and flagging `duplicate_charge_risk=True`.
+`BLOCK_RECONCILE` on the same evidence always produces
+`duplicate_charge_risk=False, recovered=False` — no automatic retry, no
+invented recovery.
+
+### RecoveryOutcome (existing model, minimally extended)
+
+The original Day 1 fields are **unchanged**: `transaction_id`,
+`action_taken`, `recovered`, `amount_recovered`, `decision_id`,
+`timestamp` (nothing was ever renamed or replaced). Day 8 added exactly
+two additive fields, both defaulted for backward compatibility:
+`duplicate_charge_risk: bool = False` and `outcome_reason: str = ""`
+(a short audit label, e.g. `"WEBHOOK_AMBIGUITY_RETRY_DUPLICATE_CHARGE"`).
+
+`unrecovered_amount` was deliberately **not** added as a stored field —
+storing it would require also redundantly storing the original
+transaction amount on `RecoveryOutcome`. Instead it's a small derived
+helper, `src.recovery.simulator.unrecovered_amount(transaction_amount,
+outcome)`, computed from the amount already available on
+`PaymentEvent`/`RecoveryEvidence`.
+
+The existing `recovery_outcomes` table (`src/db.py`) was extended
+additively with `duplicate_charge_risk INTEGER NOT NULL DEFAULT 0` and
+`outcome_reason TEXT NOT NULL DEFAULT ''` — no new table, no redesign.
+`transaction_id` remains that table's existing primary key (a Day 1/2
+decision); persisting therefore uses `INSERT OR REPLACE`, so re-simulating
+an outcome for a transaction updates it rather than conflicting with the
+Day 3 "each run is a new observation" semantics already used elsewhere.
+
+### Production integration
+
+```
+PaymentEvent -> features -> calibrated classifier -> RootCausePrediction
+    -> RulesPolicyEngine -> authorized action
+    -> estimate_outcome(evidence, authorized action)   <- exactly this action, never a hypothetical one
+    -> RecoveryOutcome -> persisted into recovery_outcomes
+```
+`src/pipeline/pipeline.py` calls `estimate_outcome` with
+`policy_decision.action` — Day 8 never chooses or overrides the action;
+that remains entirely Day 7's decision. Verified directly: a real
+`WEBHOOK_AMBIGUITY` prediction run through the full pipeline is always
+scored with `BLOCK_RECONCILE`, never `DEFER_RETRY`
+(`tests/test_recovery_pipeline_integration.py`).
+
+### Limitations
+
+- Every recovery probability and the duplicate-charge-risk assumption are
+  **synthetic simulation parameters**, not observed statistics — they
+  must be replaced/recalibrated against real labeled recovery outcomes
+  once production data exists (see `simulation_config.yaml`'s own
+  disclaimer).
+- The simulation is binary all-or-nothing recovery (an outcome either
+  recovers the full transaction amount or none of it) — a deliberate
+  simplification, not a partial-recovery model.
+- `simulate_batch()` (`src/recovery/batch.py`) is the only batch mechanism
+  built so far; the naive, rules-only, and Guardian action selectors
+  themselves are explicitly Day 9/10 work and do not exist yet.

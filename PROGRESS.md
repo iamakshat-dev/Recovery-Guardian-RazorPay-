@@ -258,9 +258,6 @@ model/feature/calibration changes.
 - Calibration provided negligible benefit on this dataset/validation-set
   size — reported honestly above, not treated as a problem to fix by
   retuning against the test set.
-- The policy engine is **still** the Day 3 placeholder — no
-  differentiated `root_cause → action` mapping exists (Day 7).
-- No counterfactual simulator or three-way experiment exists (Day 8–10).
 - No Razorpay integration exists (Day 11).
 - No frontend/dashboard exists (Day 13).
 - The pinned `requirements.txt` vs. Python 3.14 install mismatch remains
@@ -276,3 +273,90 @@ model/feature/calibration changes.
   byte-for-byte reproducible in that one column, though every substantive
   column (features + label) is. Not fixed — out of Day 6 scope (dataset
   generator is frozen), and has no effect on model/metrics reproducibility.
+
+## Day 7 — Deterministic policy engine
+
+Implemented and verified (99 tests passing, aggregate adversarial safety
+test with 48 cases, forbidden-mapping search clean, ML foundation
+confirmed frozen — see commit `cc65f13`). All six root causes have
+intentional behavior: `INFRASTRUCTURE → DEFER_RETRY`,
+`CARD_DECLINE`/`INSUFFICIENT_FUNDS → CUSTOMER_RECOVERY`,
+`WEBHOOK_AMBIGUITY → BLOCK_RECONCILE` (unconditional hard safety
+invariant), `OTP_TIMEOUT`/`USER_ABANDONMENT → NO_ACTION` (documented
+assumption, no explicit spec exists for these two). Safety guards: opt-out,
+amount threshold, retry cap, cooldown, idempotency (via the existing
+`idempotency_log` table). A detailed prose write-up in this file and in
+`docs/architecture.md` was explicitly deferred at the time (skipped by
+request) — the implementation itself is fully tested and documented in
+code comments/docstrings in `src/policy/engine.py`.
+
+## Day 8 — Shared counterfactual outcome environment
+
+Baseline before this pass: 99 passed, working tree clean at `cc65f13`.
+
+- **Data availability audit (mandatory, performed first):** inspected
+  `data/generate_data.py`, the `recovery_outcomes` table, and every other
+  data source. **No observed recovery-outcome labels exist anywhere in
+  the repository** — confirmed, not assumed. Built a transparent
+  synthetic counterfactual simulator instead of fabricating a supervised
+  training problem.
+- `src/recovery/evidence.py`: `RecoveryEvidence` — small, pre-action-only
+  evidence object (not a duplicate of `RecoveryOutcome`/`PolicyDecision`).
+- `src/recovery/simulation_config.yaml`: explicit, documented synthetic
+  simulation assumptions (recovery probabilities per action/root-cause,
+  the `WEBHOOK_AMBIGUITY` duplicate-charge-risk parameters) — not
+  production statistics, clearly labeled as such.
+- `src/recovery/simulator.py`: the one shared
+  `estimate_outcome(evidence, action) -> RecoveryOutcome`. Independent of
+  `PolicyDecision` (verified by AST inspection of its actual imports, not
+  a prose claim); accepts all five `RecoveryAction` values including ones
+  Guardian's Day 7 policy would never authorize (required for Day 9/10's
+  fair three-way comparison); deterministic by default (seed derived from
+  transaction_id + action when none is given), using a local
+  `random.Random` instance, never the global `random` module.
+- `src/recovery/batch.py`: `simulate_batch(evidence_batch,
+  action_selector)` — strategy-agnostic; does not implement the naive/
+  rules-only/Guardian selectors themselves (explicitly Day 9/10 work).
+- `src/domain/models.py`: `RecoveryOutcome` extended additively with
+  `duplicate_charge_risk: bool = False` and `outcome_reason: str = ""` —
+  all six original fields (`transaction_id`, `action_taken`, `recovered`,
+  `amount_recovered`, `decision_id`, `timestamp`) unchanged. Nothing
+  previously constructed a `RecoveryOutcome` anywhere in the codebase, so
+  this was a purely additive change.
+- `src/db.py`: `recovery_outcomes` table extended additively with
+  `duplicate_charge_risk` and `outcome_reason` columns — same table, same
+  primary key, no second outcome table.
+- `src/audit/logger.py`: `persist_recovery_outcome()` added, reusing the
+  existing connection/schema exactly as `persist_decision_record()` does.
+- `src/pipeline/pipeline.py`: now calls `estimate_outcome` with the real
+  Day-7-authorized `policy_decision.action` (never a hypothetical one) and
+  persists the result — verified directly: a real `WEBHOOK_AMBIGUITY`
+  prediction run through the full pipeline is always scored with
+  `BLOCK_RECONCILE`, never `DEFER_RETRY`.
+- Test count: 99 → 132 passed (33 new: `test_recovery_simulator.py` [26],
+  `test_recovery_batch.py` [4], `test_recovery_pipeline_integration.py`
+  [3]). One pre-existing Day 3 test's assertion (`record.outcome is None`)
+  was updated to reflect the intentional Day 3 → Day 8 contract change
+  (outcome is no longer `None`) — the same pattern as every previous
+  day's classifier/policy version-transition updates. No other tests
+  weakened or deleted. Day 7's full safety suite (47 tests, including the
+  48-case aggregate adversarial test) re-run and still green.
+- ML foundation confirmed frozen: `git diff` against both the Day 6
+  (`0a85d8a`) and Day 7 (`cc65f13`) commits for `src/model`, `src/features`,
+  and `data` all empty.
+
+### Known limitations (Day 8)
+
+- Every recovery probability and the `WEBHOOK_AMBIGUITY` duplicate-charge
+  assumption are **synthetic simulation parameters**, not observed
+  statistics — the project has zero real recovery-outcome labels. These
+  must be recalibrated against real labeled data before any number this
+  simulator produces could be treated as a real recovery-rate estimate.
+- The simulation is binary all-or-nothing (an outcome recovers the full
+  transaction amount or none of it) — a deliberate simplification.
+- The naive, rules-only, and Guardian action selectors for the Day 9/10
+  three-way experiment do not exist yet — only the shared scoring
+  environment they will all use.
+- `unrecovered_amount` is a derived helper function, not a persisted
+  `RecoveryOutcome` field (documented design choice — see
+  `docs/architecture.md`'s Day 8 section).

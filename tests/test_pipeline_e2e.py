@@ -94,7 +94,13 @@ def test_complete_pipeline_produces_a_decision_record():
     assert record.event.transaction_id == event.transaction_id
     assert record.prediction.transaction_id == event.transaction_id
     assert record.policy.transaction_id == event.transaction_id
-    assert record.outcome is None  # not Day 3's job — recovery simulator is Day 8-10
+    # Day 8: the production pipeline now scores the Day-7-authorized action
+    # through the shared counterfactual estimator -- outcome is no longer
+    # None (the one intentional Day 3 -> Day 8 contract update; see
+    # src/recovery/simulator.py, src/pipeline/pipeline.py).
+    assert record.outcome is not None
+    assert record.outcome.transaction_id == event.transaction_id
+    assert record.outcome.action_taken == record.policy.action
 
 
 # --- Test 2: database persistence ------------------------------------------

@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS recovery_outcomes (
     recovered INTEGER NOT NULL,
     amount_recovered REAL NOT NULL,
     timestamp TEXT NOT NULL,
+    duplicate_charge_risk INTEGER NOT NULL DEFAULT 0,
+    outcome_reason TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (decision_id) REFERENCES decisions (decision_id)
 );
 

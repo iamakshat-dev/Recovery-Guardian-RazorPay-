@@ -1,0 +1,39 @@
+# Recovery Guardian — Day 8 Counterfactual Simulation Assumptions
+#
+# These are SYNTHETIC SIMULATION ASSUMPTIONS, not observed production
+# statistics. The project has no real Razorpay recovery-outcome labels —
+# neither data/generate_data.py's synthetic dataset nor the
+# recovery_outcomes table has ever contained action-taken/recovery-success
+# fields (see docs/architecture.md's Day 8 data-availability audit). Every
+# probability below is an explicit, documented, easy-to-change placeholder.
+# Replace with values calibrated against real labeled recovery outcomes
+# once production data exists — do not treat these as real recovery rates.
+
+simulation_version: "sim-v1"
+
+# P(the retry/re-engagement recovers the payment | root_cause), by
+# hypothetical action. "default" applies to any root_cause not explicitly
+# listed for that action — e.g. a hypothetical DEFER_RETRY on a
+# CARD_DECLINE, which the naive "retry everything" baseline will attempt
+# but Guardian's Day 7 policy never authorizes.
+recovery_probability:
+  DEFER_RETRY:
+    INFRASTRUCTURE: 0.70   # transient infra issues often resolve on retry
+    default: 0.15          # blindly retrying a customer-side failure rarely helps
+  CUSTOMER_RECOVERY:
+    CARD_DECLINE: 0.55        # customer tries a different card/method
+    INSUFFICIENT_FUNDS: 0.45  # customer needs to fund the account first
+    default: 0.20
+
+# WEBHOOK_AMBIGUITY-specific assumptions (see Day 8 spec section 12 /
+# docs/architecture.md): the payment state is genuinely unknown. A
+# hypothetical DEFER_RETRY here must be able to represent BOTH possible
+# recovery AND duplicate-charge risk — never forced to zero recovery,
+# since that would make the naive baseline look artificially safe.
+webhook_ambiguity:
+  # P(the original, unresolved payment had already succeeded). If it had,
+  # a retry recovers nothing NEW and creates a duplicate charge.
+  original_payment_already_succeeded_probability: 0.40
+  # If the original payment had NOT already succeeded, a retry is treated
+  # like any other genuine-failure retry, at this success rate.
+  genuine_retry_success_probability: 0.50
