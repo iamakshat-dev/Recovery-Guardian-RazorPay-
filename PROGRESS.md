@@ -506,3 +506,79 @@ strategy or configuration code (verified via `git diff`).
 - Guardian's lower raw recovery and Rules-only's higher raw recovery are
   reported as genuine findings, not smoothed over.
 - No new model, policy, threshold, or strategy was introduced.
+
+## Day 11 — Production-shaped Razorpay adapter
+
+Baseline before this pass: 192 passed, working tree clean at `411bbd2`.
+Not a live Razorpay integration — no API calls, no credentials, no
+webhook-signature verification anywhere in this project.
+
+- `src/ingestion/razorpay_adapter.py`:
+  `razorpay_webhook_to_payment_event(webhook_payload, *,
+  platform_health=None) -> PaymentEvent` — mirrors the existing
+  `synthetic_to_payment_event` convention exactly. Pure, side-effect-free,
+  no ML/policy/persistence/network code (verified by source inspection).
+  Malformed input raises `AdapterValidationError`, never silently
+  produces a corrupt event.
+- **Every `PaymentEvent` field classified by source** before writing any
+  code: payload-derivable (`transaction_id`, `amount`, `timestamp`,
+  `payment_method`, `failure_code`, `retry_count`), derived from two
+  payload timestamps (`webhook_delay_seconds` — calculated, never
+  defaulted to zero), platform-wide aggregates requiring monitoring this
+  project doesn't build (`gateway_error_rate_delta`,
+  `merchant_failure_rate_delta`, `cross_merchant_failure_rate`,
+  `incident_active`), and a third category — customer-history lookup
+  (`customer_previous_successes/failures`, safely defaultable to 0/0,
+  unlike the platform aggregates).
+- **Option A selected** for the aggregate-field gap: `PlatformHealthContext`,
+  an explicit optional companion-monitoring input, clearly separated from
+  the payment payload — documented as assuming a monitoring service this
+  project does not build. Omitting it yields documented neutral defaults,
+  not a silent fabrication.
+- No separate `status` field exists on `PaymentEvent` (verified directly
+  from `src/domain/models.py`) — none was invented; Razorpay's
+  status/error terminology maps into the existing `failure_code`
+  mechanism only, via a small frozen table mapping unrecognized/absent
+  reasons to the existing canonical `"unknown"` bucket (already one of
+  the 12 frozen `FAILURE_CODE_CATEGORIES`, not a new value).
+- `tests/fixtures/razorpay_payloads.py`: representative/production-shaped
+  fixtures, explicitly labeled as such — not claimed as captured from
+  live Razorpay traffic.
+- 30 new tests: `tests/test_razorpay_adapter.py` (22 — valid payload,
+  missing/invalid amount, invalid/inverted timestamps, unknown
+  status/failure mapping, optional-field defaults, payment-method
+  normalization, webhook-delay calculation, Option A threading, no
+  persistence side effects) and `tests/test_razorpay_integration.py` (8 —
+  full real, unmocked pipeline: adapter → features → calibrated model →
+  policy → valid `PolicyDecision`; and the **synthetic/canonical
+  convergence proof**: a real `WEBHOOK_AMBIGUITY` dataset row and a real
+  `INFRASTRUCTURE` row, expressed as both a synthetic row and an
+  equivalent Razorpay-shaped payload, produce identical
+  `RootCausePrediction` (probability equal within `1e-9`) and identical
+  `PolicyDecision.action` — with the Razorpay-sourced
+  `WEBHOOK_AMBIGUITY` case confirmed `BLOCK_RECONCILE`, never
+  `DEFER_RETRY`).
+- Test count: 192 → 222 passed. Adapter + integration tests re-run as two
+  fully separate `python3 -m pytest` processes — identical (`30 passed`
+  both times). Day 7 (47), Day 9 (50), and Day 10 (10) regression suites
+  all re-run and green.
+- ML/feature/policy/simulator/dataset/Day 9/Day 10 all confirmed
+  untouched via `git diff` against `411bbd2` (all empty).
+  `FEATURE_COLUMNS` count (26) and hash unchanged; calibrated classifier
+  still loads.
+- No frontend, dashboard, `src/api/`, or Day 12 work started.
+
+### Known limitations (Day 11)
+
+- Representative/production-shaped fixtures only — not verified against
+  live Razorpay production traffic.
+- `INFRASTRUCTURE` classification for a real Razorpay-sourced event is
+  honestly incomplete without a genuine platform-monitoring integration
+  (Option A's companion input is assumed, not built).
+- Webhook delay requires both a payment and a webhook-envelope timestamp;
+  payloads lacking either are rejected, not defaulted.
+- Convergence with synthetic data rounds webhook delay to whole seconds
+  (Razorpay's real integer-second timestamp precision) — documented, not
+  hidden.
+- No live Razorpay integration, credentials, authentication, or webhook
+  verification exists.

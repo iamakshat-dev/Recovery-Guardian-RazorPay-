@@ -826,3 +826,225 @@ recalibration of the simulation assumptions.
   validity — no deployment claim is made from this analysis.
 - No new model, policy, threshold, or business logic was introduced; Day
   10 is read-only analysis over frozen Day 9 artifacts.
+
+---
+
+## Day 11 — Production-Shaped Razorpay Adapter
+
+Day 11 proves that a Razorpay-shaped payment event can enter Recovery
+Guardian, normalize into the existing canonical `PaymentEvent` contract,
+and flow through the already-frozen feature → calibrated ML → policy
+architecture **without creating a parallel intelligence pipeline**. It is
+not a live Razorpay integration — no API calls, no credentials, no
+webhook-signature verification exist or are required.
+
+```
+Razorpay-shaped payload           Synthetic CSV row
+        │                                │
+        ▼                                ▼
+  RazorpayAdapter               synthetic_adapter
+  (src/ingestion/                (src/ingestion/
+   razorpay_adapter.py)           synthetic_adapter.py)
+        │                                │
+        └───────────┬────────────────────┘
+                     ▼
+            canonical PaymentEvent
+                     │
+                     ▼
+       existing feature builder (unmodified, 26 FEATURE_COLUMNS)
+                     │
+                     ▼
+       frozen calibrated classifier (unmodified)
+                     │
+                     ▼
+       frozen Day 7 RulesPolicyEngine (unmodified)
+                     │
+                     ▼
+       existing recovery/audit layer (unmodified)
+```
+
+**The recovery intelligence is data-source agnostic at the canonical
+`PaymentEvent` boundary.** Synthetic and production-shaped inputs
+normalize into the same internal event contract and reuse the same
+frozen feature, prediction, calibration, and policy layers — proven
+directly (not merely asserted) by the convergence tests below. This does
+**not** mean production deployment is ready: it would still require
+validated production event schemas, real operational monitoring inputs,
+labeled recovery outcomes, retraining/recalibration, security review, and
+compliance review (see "Production Readiness Boundary" below).
+
+### The adapter
+
+`src/ingestion/razorpay_adapter.py::razorpay_webhook_to_payment_event(webhook_payload, *, platform_health=None) -> PaymentEvent`
+— mirrors the existing `synthetic_to_payment_event(row) -> PaymentEvent`
+convention exactly (same file layout pattern, same "one pure function"
+shape). It is a boundary layer only: no ML, no policy, no feature
+engineering, no persistence, no network calls anywhere in the module
+(verified by source inspection in `tests/test_razorpay_adapter.py`).
+Malformed input raises `AdapterValidationError` rather than silently
+producing a corrupt event.
+
+The payload shape is **representative/production-shaped**, built from
+Razorpay's well-documented public conventions (amounts as integers in the
+smallest currency subunit; a payment `error_code`/`error_reason` pair; a
+webhook envelope with its own `created_at` wrapping
+`payload.payment.entity`) — **not captured from live Razorpay production
+traffic**, and no official schema guarantee is claimed.
+
+### Field mapping (implemented, not aspirational)
+
+| External/Representative Field | Canonical Field | Source Type | Transformation | Required? |
+|---|---|---|---|---|
+| `payload.payment.entity.id` | `transaction_id` | payload-derived | direct | Yes |
+| `payload.payment.entity.amount` | `amount` | payload-derived | ÷100 (paise → rupees; Razorpay's documented smallest-subunit convention) | Yes |
+| `payload.payment.entity.created_at` | `timestamp` | payload-derived | Unix epoch seconds → `datetime` (UTC, naive) | Yes |
+| `payload.payment.entity.method` | `payment_method` | payload-derived | lowercased, passed through (no second taxonomy) | No (defaults via existing OOV handling) |
+| `payload.payment.entity.error_reason` | `failure_code` | payload-derived | mapped via a small frozen table to the existing `FAILURE_CODE_CATEGORIES`; unrecognized/absent → existing canonical `"unknown"` bucket | No |
+| `payload.payment.entity.attempts` | `retry_count` | payload-derived | direct; defaults to 0 if absent | No |
+| `webhook_payload.created_at` + `entity.created_at` | `webhook_delay_seconds` | **derived from two payload timestamps** | `webhook_created_at − payment_created_at`, seconds | Yes (both timestamps) |
+| `entity.notes.merchant_id` | `merchant_id` | payload-derived (via a representative `notes` convention) | direct; defaults to `"unknown_merchant"` if absent | No |
+| `entity.notes.customer_previous_successes/failures` | `customer_previous_successes/failures` | **customer-history lookup input** (a third category — see below) | direct; defaults to 0/0 | No |
+| `platform_health.gateway_error_rate_delta` | `gateway_error_rate_delta` | **companion monitoring input** (Option A) | direct; defaults to 0.0 if no context supplied | No |
+| `platform_health.merchant_failure_rate_delta` | `merchant_failure_rate_delta` | companion monitoring input | direct; defaults to 0.0 | No |
+| `platform_health.cross_merchant_failure_rate` | `cross_merchant_failure_rate` | companion monitoring input | direct; defaults to 0.0 | No |
+| `platform_health.incident_active` | `incident_active` | companion monitoring input | direct; defaults to `False` | No |
+| — | `source` | synthetic test-only (adapter-set constant) | always `"razorpay"` | — |
+
+**No separate `status` field exists on `PaymentEvent`, and none was
+invented.** Payment state is represented entirely through `failure_code`
+(inspected directly from `src/domain/models.py`) — Razorpay's
+`status`/`error_reason` terminology maps into that single existing
+mechanism, never a second one.
+
+### Critical aggregate-field decision — Option A selected
+
+Every `PaymentEvent` field was classified by where its information can
+realistically originate:
+
+**Transaction/payload-derivable** (§6A): `transaction_id`, `amount`,
+`timestamp`, `payment_method`, `failure_code`, `retry_count` — all
+plausibly present on a single Razorpay payment/webhook payload.
+`webhook_delay_seconds` is derived from two payload timestamps, never
+defaulted.
+
+**Platform-wide aggregate fields** (§6B): `gateway_error_rate_delta`,
+`merchant_failure_rate_delta`, `cross_merchant_failure_rate`,
+`incident_active`. A single payment payload cannot legitimately carry
+real-time cross-merchant failure statistics — that requires a separate
+monitoring/observability service this project does not build.
+
+**Selected: Option A** — `PlatformHealthContext`
+(`src/ingestion/razorpay_adapter.py`) is an explicit, optional companion
+input representing exactly what such a service would supply. **This
+assumes an external monitoring/observability input that this project
+does not currently build.** The adapter clearly separates payment payload
+data from this companion context — it is never disguised as part of the
+Razorpay payload itself. If omitted, the resulting event carries neutral
+(non-incident) values — verified directly by
+`test_no_platform_health_context_defaults_to_documented_neutral_values`.
+
+**Production limitation, stated plainly: without a real
+platform-monitoring integration, a production-shaped Razorpay event
+cannot currently provide all aggregate infrastructure signals required by
+the frozen classifier.** A production deployment lacking that monitoring
+service would see `INFRASTRUCTURE` classification degrade toward whatever
+signal `failure_code` alone provides — the same limitation
+`RulesOnlyStrategy` already demonstrated in Day 9/10's experiment.
+
+**A third category** exists that Section 6 didn't separately name:
+`customer_previous_successes`/`customer_previous_failures` require a
+per-customer history lookup (e.g. a merchant's CRM), which a single
+webhook payload doesn't inherently carry either. Unlike the platform
+aggregates, defaulting these to 0/0 is the **correct**,
+already-designed-for representation for "no history available" —
+`src/features/build_features.py`'s Laplace-smoothed
+`customer_success_rate` and `is_new_customer` indicator exist
+specifically for this case (see that module's own Day 2 docstring) — so
+this default does not suppress a systemic signal the way defaulting
+`incident_active` would.
+
+### Webhook delay — the WEBHOOK_AMBIGUITY-critical field
+
+`webhook_delay_seconds` is **calculated**, never defaulted to zero:
+`webhook_created_at (webhook envelope) − payment_created_at (payment
+entity)`, both required Unix-epoch-second fields. A webhook claiming to
+have arrived before the payment was even created is rejected as malformed
+input (`AdapterValidationError`), not silently clamped. If a real
+integration cannot supply the webhook envelope's own timestamp, this
+adapter cannot safely compute the delay and will reject the payload —
+this is an explicit, documented limitation, not a silent zero.
+
+Razorpay's real timestamps are integer-second precision (no
+sub-second component), so exact fractional-second reproduction of a
+synthetic dataset row's `webhook_delay_seconds` is not possible through
+this representative format — the convergence tests round to the nearest
+second on both sides for a fair, honest comparison (documented directly
+in `tests/test_razorpay_integration.py`), rather than silently truncating
+without acknowledgment.
+
+### Synthetic/canonical convergence — proven, not merely asserted
+
+`tests/test_razorpay_integration.py` takes a **real** frozen-dataset
+`WEBHOOK_AMBIGUITY` row and a real `INFRASTRUCTURE` row, expresses each
+as both a synthetic CSV row and an equivalent Razorpay-shaped payload
+(companion `PlatformHealthContext` supplying that row's real aggregate
+values — Option A, explicitly, not hidden), and proves:
+
+- Identical `RootCausePrediction` (`root_cause` equal, `probability`
+  equal within `1e-9`) from the real frozen calibrated classifier.
+- Identical `PolicyDecision.action` from the real frozen
+  `RulesPolicyEngine`.
+- The `WEBHOOK_AMBIGUITY` twin's action is `BLOCK_RECONCILE` — **never**
+  `DEFER_RETRY` — for the Razorpay-sourced event, exactly as the
+  synthetic path already guaranteed.
+
+This proves **same canonical boundary, same feature builder, same model,
+same policy** for the fields both sources can legitimately supply. It
+does **not** prove real production infrastructure monitoring exists —
+that limitation is stated explicitly above, not concealed by the
+convergence result.
+
+### Production Monitoring Boundary
+
+Transaction-level `PaymentEvent` fields can be normalized from real
+payment/webhook data. `gateway_error_rate_delta`,
+`merchant_failure_rate_delta`, `cross_merchant_failure_rate`, and
+`incident_active` require platform-level operational monitoring rather
+than a single payment payload. Day 11's fixture and convergence tests
+assume a companion monitoring input (Option A) supplying these — this
+project does not build that monitoring service, and no claim is made that
+it exists.
+
+### Production Readiness Boundary
+
+**What is now demonstrated:** a Razorpay-shaped payment/webhook event can
+be normalized into the canonical `PaymentEvent`, pass unmodified through
+the existing feature builder, the existing frozen calibrated classifier,
+and the existing frozen Day 7 policy engine, and produce a valid
+`PolicyDecision` — with the `WEBHOOK_AMBIGUITY → BLOCK_RECONCILE` safety
+invariant intact for a Razorpay-sourced event specifically.
+
+**What is NOT yet implemented:** live Razorpay API integration;
+production authentication; production webhook-signature verification;
+real platform monitoring (Option A's companion input); real labeled
+recovery outcomes (Day 8's simulation remains synthetic); ML
+retraining/recalibration against real data; security review; compliance
+review. None of these were built, attempted, or claimed on Day 11.
+
+### Limitations
+
+- The adapter is representative/production-shaped, not verified against
+  live Razorpay production traffic or official schema documentation
+  beyond well-known public API conventions (amount subunits, webhook
+  envelope shape).
+- `INFRASTRUCTURE` classification for a real Razorpay-sourced event
+  without a genuine monitoring integration is honestly incomplete — see
+  the aggregate-field decision above.
+- Webhook delay cannot be computed without both a payment-level and a
+  webhook-envelope-level timestamp; payloads lacking either are rejected,
+  not defaulted.
+- Convergence with synthetic data is exact for feature-relevant fields
+  but necessarily rounds webhook delay to whole seconds (Razorpay's real
+  timestamp precision) — documented, not hidden.
+- No live Razorpay integration, credentials, or network calls exist
+  anywhere in this module or its tests.
