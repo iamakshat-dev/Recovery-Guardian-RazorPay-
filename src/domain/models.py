@@ -51,6 +51,12 @@ class ReasonCode(str, Enum):
     HIGH_VALUE_ESCALATION = "HIGH_VALUE_ESCALATION"
     IDEMPOTENCY_BLOCK = "IDEMPOTENCY_BLOCK"
     CUSTOMER_SIDE_FAILURE = "CUSTOMER_SIDE_FAILURE"
+    # Added Day 7 (src/policy/engine.py) — the eight codes above already
+    # covered nearly every case the real policy engine needed; these three
+    # fill the only genuine gaps rather than duplicating an existing code:
+    COOLDOWN_ACTIVE = "COOLDOWN_ACTIVE"
+    INVALID_POLICY_INPUT = "INVALID_POLICY_INPUT"
+    NO_AUTOMATED_ACTION_DEFINED = "NO_AUTOMATED_ACTION_DEFINED"
 
 
 class PaymentEvent(BaseModel):
@@ -73,6 +79,21 @@ class PaymentEvent(BaseModel):
     customer_previous_failures: int
     incident_active: bool
     source: str = Field(description="'razorpay' or 'synthetic'")
+    # Added Day 7 for the policy engine (src/policy/engine.py). Both are
+    # optional and default to "no restriction" precisely so every existing
+    # Day 3-6 PaymentEvent construction (none of which sets these) keeps
+    # working unchanged — this is additive, not a breaking change to the
+    # frozen contract. Neither field is read by the feature builder or the
+    # ML model; build_features() only ever selects FEATURE_COLUMNS by name.
+    customer_opted_out: bool = Field(
+        default=False,
+        description="True if the customer has opted out of automated recovery.",
+    )
+    last_recovery_action_at: Optional[datetime] = Field(
+        default=None,
+        description="When an automated recovery action was last authorized "
+        "for this transaction, if ever — used for the policy cooldown guard.",
+    )
 
 
 class RootCausePrediction(BaseModel):

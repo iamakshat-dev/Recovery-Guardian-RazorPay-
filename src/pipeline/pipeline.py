@@ -1,8 +1,8 @@
 """
-Recovery Guardian — Core Pipeline (Day 3, classifier updated Day 4 and Day 5)
+Recovery Guardian — Core Pipeline (Day 3, classifier updated Day 4/5, policy updated Day 7)
 
     PaymentEvent -> feature builder -> calibrated Logistic Regression classifier
-                 -> placeholder policy engine -> DecisionRecord -> SQLite
+                 -> deterministic policy engine -> DecisionRecord -> SQLite
 
 This module is the single reusable entry point every caller goes through:
 today's CLI (run_pipeline.py), the existing FastAPI skeleton, the Day 3
@@ -23,15 +23,24 @@ structural placeholder (src/model/placeholder_classifier.py).
 Day 5 update: the classifier stage now uses the CALIBRATED classifier
 (src/model/calibrated_classifier.py), which wraps the same frozen Day 4
 model with a validation-fit sigmoid calibration layer — the underlying
-Logistic Regression is unchanged (see src/model/calibrate.py). Both the
-Day 3 placeholder and the Day 4 raw classifier remain in the codebase,
-fully intact and independently loadable, as reference/comparison fixtures
-— neither was modified to make this swap. The policy engine is UNCHANGED
-— still the Day 3 placeholder (policy_version="placeholder-v1") — real
-policy logic is later work (Day 7).
+Logistic Regression is unchanged (see src/model/calibrate.py).
+
+Day 7 update: the policy stage now uses the real, deterministic,
+config-driven RulesPolicyEngine (src/policy/engine.py) instead of the Day
+3 structural placeholder (src/policy/placeholder_engine.py). Idempotency
+is enforced using the EXISTING idempotency_log table (src/db.py, wrapped
+by src/policy/idempotency.py) — recorded actions for this transaction are
+read before deciding, and any newly-authorized automated action is
+recorded afterward, all on the same connection/transaction as the rest of
+this pipeline run.
+
+The Day 3 policy placeholder and the Day 4 raw classifier both remain in
+the codebase, fully intact and independently loadable, as
+reference/comparison fixtures — neither was modified to make these swaps.
 """
 
 import sqlite3
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -42,7 +51,8 @@ from src.db import SCHEMA, get_connection
 from src.domain.models import DecisionRecord, PaymentEvent
 from src.features.build_features import build_features
 from src.model.calibrated_classifier import CalibratedRootCauseClassifier
-from src.policy.placeholder_engine import PolicyEngine
+from src.policy.engine import AUTOMATED_ACTIONS, RulesPolicyEngine
+from src.policy.idempotency import get_recorded_actions, record_action
 
 
 def run_pipeline(
@@ -80,9 +90,28 @@ def run_pipeline(
     classifier = CalibratedRootCauseClassifier()
     prediction = classifier.predict(features_row)
 
-    # 5-6. Placeholder policy engine -> PolicyDecision.
-    policy_engine = PolicyEngine()
-    policy_decision = policy_engine.decide(prediction, event)
+    # 5-6. Real, deterministic policy engine -> PolicyDecision. Idempotency
+    #      is read from and written to the existing idempotency_log table
+    #      on the SAME connection this pipeline run persists everything
+    #      else through.
+    owns_conn = conn is None
+    if conn is None:
+        conn = get_connection()
+    conn.executescript(SCHEMA)  # idempotent (CREATE TABLE IF NOT EXISTS)
+
+    recorded_actions = get_recorded_actions(conn, event.transaction_id)
+    policy_engine = RulesPolicyEngine()
+    # Naive UTC (not datetime.utcnow(), which is deprecated) -- kept naive
+    # to match the rest of the project's datetime convention (PaymentEvent
+    # .timestamp/.last_recovery_action_at are naive throughout), so cooldown
+    # arithmetic (now - last_recovery_action_at) never raises on
+    # naive/aware mismatch.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    policy_decision = policy_engine.decide(
+        prediction, event, already_executed_actions=recorded_actions, now=now
+    )
+    if policy_decision.action in AUTOMATED_ACTIONS:
+        record_action(conn, event.transaction_id, policy_decision.action)
 
     # 7. Assemble the audit record.
     record = DecisionRecord(
@@ -93,12 +122,9 @@ def run_pipeline(
         outcome=None,
     )
 
-    # 8. Persist via the existing SQLite schema/connection helper.
-    owns_conn = conn is None
-    if conn is None:
-        conn = get_connection()
+    # 8. Persist via the existing SQLite schema/connection helper (same
+    #    connection already opened above for the idempotency check).
     try:
-        conn.executescript(SCHEMA)  # idempotent (CREATE TABLE IF NOT EXISTS)
         persist_decision_record(record, conn)
     finally:
         if owns_conn:

@@ -146,8 +146,11 @@ def test_model_version_and_policy_version_are_recorded():
     # this assertion is the one intentional Day 4 -> Day 5 contract update
     # (see src/model/calibrated_classifier.py, src/pipeline/pipeline.py).
     assert record.prediction.model_version == "root-cause-logreg-calibrated-v1"
-    # The policy engine is UNCHANGED — still the Day 3 placeholder.
-    assert record.policy.policy_version == "placeholder-v1"
+    # Day 7: the production pipeline's policy stage became the real,
+    # deterministic, config-driven RulesPolicyEngine, not the Day 3
+    # placeholder — this is the one intentional Day 3 -> Day 7 policy
+    # contract update (see src/policy/engine.py, src/policy/rules.yaml).
+    assert record.policy.policy_version == "rules-v1"
 
 
 # --- Test 5: LLM independence -------------------------------------------------

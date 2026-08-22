@@ -1,0 +1,42 @@
+# Recovery Guardian — Day 7 Policy Configuration
+#
+# This file contains POLICY configuration only: confidence thresholds and
+# safety limits. It contains NO ML logic and NO model coefficients —
+# changing a value here changes what the SYSTEM IS PERMITTED TO DO, never
+# what the frozen classifier believes. See src/policy/engine.py for how
+# this is loaded and applied.
+#
+# Threshold semantics (see also docs/architecture.md): every confidence
+# threshold below is inclusive — a prediction's calibrated probability
+# must be >= the threshold to authorize the corresponding automated
+# action. Exactly at the threshold, the automated action IS authorized.
+
+policy_version: "rules-v1"
+
+# Minimum calibrated probability required to authorize the automated
+# action for that root cause. Below this, the policy falls back to
+# HUMAN_REVIEW regardless of which class was predicted.
+#
+# WEBHOOK_AMBIGUITY deliberately has NO entry here: it always maps to
+# BLOCK_RECONCILE regardless of confidence — see src/policy/engine.py.
+# This is a hard safety invariant, not a confidence-gated business rule,
+# so it does not belong in the same table as the others.
+confidence_thresholds:
+  INFRASTRUCTURE: 0.75
+  CARD_DECLINE: 0.75
+  INSUFFICIENT_FUNDS: 0.75
+  OTP_TIMEOUT: 0.75
+  USER_ABANDONMENT: 0.75
+
+safety_limits:
+  # Applies uniformly to every root cause, not only INFRASTRUCTURE's
+  # DEFER_RETRY — see src/policy/engine.py's module docstring for why.
+  max_automated_retries: 3
+
+  # Minutes that must elapse since the last automated recovery action on
+  # this transaction before another automated action may be authorized.
+  cooldown_minutes: 30
+
+  # Transactions above this amount always escalate to HUMAN_REVIEW,
+  # regardless of root cause or confidence.
+  max_automated_recovery_amount: 50000.0

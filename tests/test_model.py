@@ -304,4 +304,7 @@ def test_pipeline_integration_uses_real_model_version(tmp_path, monkeypatch):
     assert record.prediction.model_version == "root-cause-logreg-calibrated-v1"
     assert record.prediction.model_version != "placeholder-v1"
     assert record.prediction.model_version != "root-cause-logreg-v1"  # not the raw Day 4 version
-    assert record.policy.policy_version == "placeholder-v1"  # policy untouched in Day 4/5
+    # Day 7: the production pipeline's policy stage is now the real
+    # RulesPolicyEngine, not the Day 3 placeholder.
+    assert record.policy.policy_version == "rules-v1"
+    assert record.policy.policy_version != "placeholder-v1"
