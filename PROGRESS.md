@@ -205,6 +205,54 @@ Day 6, as this file previously and incorrectly said).
   calibration_plot.png}` (gitignored — regenerate with
   `python -m src.model.calibrate`, after `python -m src.model.training`).
 
+## Day 6 — Freeze + clean-checkout reproducibility verification
+
+Baseline before this pass: 52 passed, working tree clean at `6f72b22`.
+This was a freeze/verification checkpoint — no new functionality, no
+model/feature/calibration changes.
+
+- **Artifact verification (PASS):** raw artifact
+  (`artifacts/root_cause_classifier.joblib`, `root-cause-logreg-v1`) and
+  calibrated artifact (`artifacts/root_cause_classifier_calibrated.joblib`,
+  `root-cause-logreg-calibrated-v1`) both load independently, remain
+  separate files, and the production pipeline (`src/pipeline/pipeline.py`)
+  confirmed to import `CalibratedRootCauseClassifier` (calibrated), not
+  the raw classifier. `FEATURE_COLUMNS` and class ordering confirmed
+  identical in both artifacts. The calibrated model's internal frozen
+  estimator confirmed to reference the exact same `coef_`/`intercept_`/
+  `classes_` as the standalone raw artifact — not a retrained copy.
+- **Clean-checkout reproduction (PASS):** cloned the local repo at commit
+  `6f72b220f0dff08aa449a7e1f14317c4cfab6cb4` into a fresh, isolated
+  directory (only committed state — no gitignored files present), fresh
+  venv, and ran `make data` → `python -m src.model.training` →
+  `python -m src.model.calibrate` from scratch.
+  - Dataset: every column except `transaction_id` byte-identical to the
+    frozen dataset. `transaction_id`'s trailing 6-hex-char suffix comes
+    from unseeded `uuid.uuid4()` in `data/generate_data.py` (not the
+    seeded RNG) — a pre-existing generator property, documented, not
+    fixed (out of scope; has zero effect since `transaction_id` isn't a
+    feature).
+  - Day 4 model: `coef_`/`intercept_` byte-identical (max abs diff 0.0),
+    `classes_` and `n_iter_` identical.
+  - Day 4 predictions: 100% agreement over the complete 242-row test set,
+    max probability absolute difference 0.0.
+  - Day 4 metrics JSON: byte-identical to the frozen file.
+  - Day 5 calibration: fitted sigmoid calibrator parameters byte-identical
+    (max abs diff 0.0).
+  - Day 5 metrics JSON: byte-identical to the frozen file.
+  - **Reproducibility verdict: EXACT MATCH** (with the fully-explained,
+    feature-irrelevant `transaction_id` exception above).
+- **Environment note:** the pinned `requirements.txt` still fails to
+  install on this machine's only available Python (3.14.2) —
+  pre-existing, previously documented, not modified today. The clean
+  checkout used the same unpinned dependency versions that produced the
+  authoritative frozen results, for a valid comparison.
+- `docs/architecture.md` created — the frozen ML state, freshly
+  re-verified numbers only (no copied console output).
+- No defects found. No source code changes were required or made.
+- Test count: 52 → 52 (unchanged — Day 6 is verification, not new
+  functionality; no new tests were added).
+
 ## Known limitations (accurate as of this pass)
 
 - Calibration provided negligible benefit on this dataset/validation-set
@@ -215,11 +263,16 @@ Day 6, as this file previously and incorrectly said).
 - No counterfactual simulator or three-way experiment exists (Day 8–10).
 - No Razorpay integration exists (Day 11).
 - No frontend/dashboard exists (Day 13).
-- The pinned `requirements.txt` vs. Python 3.14 install mismatch (flagged
-  during the earlier security audit) remains unresolved.
+- The pinned `requirements.txt` vs. Python 3.14 install mismatch remains
+  unresolved (confirmed again during Day 6's clean-checkout attempt).
 - `RootCauseLogRegClassifier` / `CalibratedRootCauseClassifier` reload and
   revalidate their artifacts from disk on every `run_pipeline()` call —
   fine at this scale, unaddressed because it isn't a correctness issue.
 - The reliability diagram's mid-confidence bins are noisy (few samples per
   bin) because the test set is only 242 rows and the model is already
   highly accurate — a real property of the evaluation, not a plotting bug.
+- `transaction_id`'s random suffix (unseeded `uuid.uuid4()` in
+  `data/generate_data.py`) means the synthetic dataset CSV is not
+  byte-for-byte reproducible in that one column, though every substantive
+  column (features + label) is. Not fixed — out of Day 6 scope (dataset
+  generator is frozen), and has no effect on model/metrics reproducibility.
