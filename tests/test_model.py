@@ -267,11 +267,32 @@ def test_classifier_is_deterministic_given_same_training_config(tmp_path):
 # --- Test 14: pipeline integration -------------------------------------------
 
 def test_pipeline_integration_uses_real_model_version(tmp_path, monkeypatch):
-    import src.model.classifier as classifier_module
+    """Day 5 update: the production pipeline now serves predictions through
+    CalibratedRootCauseClassifier, not the raw Day 4 RootCauseLogRegClassifier
+    directly (src/pipeline/pipeline.py) — so this test builds a fresh local
+    raw + calibrated artifact pair and monkeypatches
+    src.model.calibrated_classifier.ARTIFACT_PATH (not
+    src.model.classifier.ARTIFACT_PATH, which the pipeline no longer reads)."""
+    import src.model.calibrated_classifier as calibrated_classifier_module
+    from src.model.calibrate import calibrate_and_evaluate
 
-    artifact_path = tmp_path / "model.joblib"
-    train(data_path=DATA_PATH, artifact_path=artifact_path, metrics_path=tmp_path / "metrics.json", random_state=42)
-    monkeypatch.setattr(classifier_module, "ARTIFACT_PATH", artifact_path)
+    raw_artifact_path = tmp_path / "model.joblib"
+    train(
+        data_path=DATA_PATH,
+        artifact_path=raw_artifact_path,
+        metrics_path=tmp_path / "metrics.json",
+        random_state=42,
+    )
+
+    calibrated_artifact_path = tmp_path / "model_calibrated.joblib"
+    calibrate_and_evaluate(
+        raw_artifact_path=raw_artifact_path,
+        calibrated_artifact_path=calibrated_artifact_path,
+        metrics_path=tmp_path / "evaluation_metrics.json",
+        confusion_matrix_plot_path=tmp_path / "confusion_matrix.png",
+        calibration_plot_path=tmp_path / "calibration_plot.png",
+    )
+    monkeypatch.setattr(calibrated_classifier_module, "ARTIFACT_PATH", calibrated_artifact_path)
 
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
@@ -280,6 +301,7 @@ def test_pipeline_integration_uses_real_model_version(tmp_path, monkeypatch):
     event = make_event()
     record = run_pipeline(event, conn=conn)
 
-    assert record.prediction.model_version == "root-cause-logreg-v1"
+    assert record.prediction.model_version == "root-cause-logreg-calibrated-v1"
     assert record.prediction.model_version != "placeholder-v1"
-    assert record.policy.policy_version == "placeholder-v1"  # policy untouched in Day 4
+    assert record.prediction.model_version != "root-cause-logreg-v1"  # not the raw Day 4 version
+    assert record.policy.policy_version == "placeholder-v1"  # policy untouched in Day 4/5

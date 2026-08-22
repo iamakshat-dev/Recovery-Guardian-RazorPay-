@@ -10,12 +10,17 @@ one transaction can travel end to end — event -> features -> classifier
 -> policy -> audit record -> SQLite — without any CSV- or
 Razorpay-specific logic leaking into the pipeline itself.
 
-Day 4 update: the pipeline's classifier stage is now the real, trained
+Day 4 update: the pipeline's classifier stage became the real, trained
 Logistic Regression model (src/model/classifier.py) rather than the Day 3
-placeholder — this CLI's output will show `Model Version:
-root-cause-logreg-v1` accordingly. Run `python -m src.model.training`
-first if no trained artifact exists yet. The policy engine is still the
-Day 3 placeholder (`Policy Version: placeholder-v1`).
+placeholder. Run `python -m src.model.training` first if no trained
+artifact exists yet.
+
+Day 5 update: the pipeline now uses the CALIBRATED classifier
+(src/model/calibrated_classifier.py) — this CLI's output will show
+`Model Version: root-cause-logreg-calibrated-v1` accordingly. Run
+`python -m src.model.calibrate` first if no calibrated artifact exists
+yet (it requires the Day 4 raw artifact to already exist). The policy
+engine is still the Day 3 placeholder (`Policy Version: placeholder-v1`).
 
 Day 3 rerun semantics: this CLI does NOT implement idempotency. Each
 invocation reads the same dataset row but the synthetic adapter mints a

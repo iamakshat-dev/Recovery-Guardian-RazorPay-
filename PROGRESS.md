@@ -124,9 +124,92 @@ Baseline before this pass: 34 passed, working tree clean at `ef09f4f`.
 - Test count: 34 → 42 passed (35 after the build_features fix/regression
   test, +7 from the new policy guard file). No regressions.
 
+## Day 5 — Probability calibration + rigorous evaluation
+
+Baseline before this pass: 42 passed, working tree clean at `a5131e6`.
+Correction to the note above: calibration is the project's Day 5 item (not
+Day 6, as this file previously and incorrectly said).
+
+- **Day 4 remained frozen.** No change to the dataset, `FEATURE_COLUMNS`,
+  `train_val_test_split`, or the trained `LogisticRegression`'s parameters.
+  `src/model/classifier.py` (the raw Day 4 classifier) and
+  `src/model/training.py` were not modified. Verified in code and by test:
+  `coef_`/`intercept_`/`classes_` compared before vs. after calibration
+  fitting, byte-identical, both in-memory and re-loaded from disk.
+- `src/model/calibrate.py`: loads the frozen Day 4 artifact (read-only),
+  fits a **sigmoid (Platt)** calibration layer using
+  `sklearn.frozen.FrozenEstimator` + `CalibratedClassifierCV` on the
+  **validation split only** (241 rows), evaluates on the untouched **test
+  split** (242 rows), and persists a separate calibrated artifact +
+  `experiments/results/{evaluation_metrics.json, confusion_matrix.png,
+  calibration_plot.png}`. Sigmoid was chosen over isotonic specifically
+  because the validation set is small (~40 rows/class on average) —
+  isotonic risks overfitting into a jagged step function at this size.
+  `FrozenEstimator.fit()` is a no-op by construction, so calibration
+  fitting is structurally incapable of retraining the underlying model —
+  verified empirically (object identity + parameter equality) before
+  writing the module, and re-verified by
+  `tests/test_calibration.py::test_calibration_does_not_change_the_frozen_day4_model`.
+- `src/model/calibrated_classifier.py`: new, separate
+  `CalibratedRootCauseClassifier` (same `.predict(features) ->
+  RootCausePrediction` contract) — `src/model/classifier.py`'s raw Day 4
+  `RootCauseLogRegClassifier` was NOT modified and remains independently
+  loadable.
+- Model version: `root-cause-logreg-calibrated-v1` (base:
+  `root-cause-logreg-v1`). Artifact:
+  `artifacts/root_cause_classifier_calibrated.joblib` — separate file,
+  raw artifact untouched (confirmed unchanged on-disk mtime).
+- `src/pipeline/pipeline.py` updated to serve the calibrated classifier
+  (the one intentional, explicitly-authorized Day 5 integration point —
+  analogous to the Day 3→4 swap). Policy engine unchanged.
+- 10 new tests in `tests/test_calibration.py`, covering: valid 6-class
+  probabilities, validation-only calibration data flow (via a spy on the
+  actual `fit_calibration` call, not a comment), frozen-model integrity,
+  distinct/independently-loadable artifacts, all-six-class metrics,
+  artifact existence/non-empty, valid multiclass Brier/ECE, and real
+  end-to-end calibrated inference through `run_pipeline()`.
+- Updated `tests/conftest.py`'s session fixture to also fit and register a
+  real calibrated artifact (in addition to the Day 4 raw one), so
+  `pytest -q` remains reproducible on a fresh clone with no manual
+  training/calibration step required first.
+- Updated the two production-pipeline `model_version` assertions in
+  `tests/test_pipeline_e2e.py` and one in `tests/test_model.py` from
+  `root-cause-logreg-v1` to `root-cause-logreg-calibrated-v1` — the one
+  intentional Day 4 → Day 5 contract change (analogous to the Day 3 → Day
+  4 update). The raw classifier's own direct-instantiation tests were left
+  asserting `root-cause-logreg-v1`, unchanged, since that classifier
+  itself did not change.
+- Test count: 42 → 52 passed. No regressions.
+
+### Day 5 evaluation (test split, n=242, calibrated model, `random_state=42`)
+
+- Accuracy: 0.9793, Macro F1: 0.9760 (raw Day 4: accuracy 0.9835, macro F1
+  0.9810 — a very small, honestly-reported decrease: one additional
+  `WEBHOOK_AMBIGUITY`→`INFRASTRUCTURE` misclassification post-calibration).
+- Per-class (calibrated): `CARD_DECLINE` 1.00/1.00,
+  `INSUFFICIENT_FUNDS` 1.00/1.00, `OTP_TIMEOUT` 1.00/1.00,
+  `USER_ABANDONMENT` 1.00/1.00, `INFRASTRUCTURE` 0.945/0.963,
+  `WEBHOOK_AMBIGUITY` 0.920/0.885.
+- Multiclass Brier score: calibrated 0.0341 vs. raw 0.0303 — calibration
+  made the Brier score **slightly worse**, not better, on this dataset.
+- Top-label ECE (10 bins): calibrated 0.0428 vs. raw 0.0440 — a marginal
+  improvement, well within noise for a 242-row test set.
+- **Honest conclusion: calibration had essentially no practical effect
+  here.** The raw Day 4 model was already well-calibrated on this
+  synthetic dataset (very low Brier/ECE to begin with), and a 241-row
+  validation set gives sigmoid calibration little room to improve on
+  that. This is reported as-is — no retuning was done to make the result
+  look better, per the project's no-fabrication rule.
+- Full confusion matrix, per-class support, and both plots:
+  `experiments/results/{evaluation_metrics.json, confusion_matrix.png,
+  calibration_plot.png}` (gitignored — regenerate with
+  `python -m src.model.calibrate`, after `python -m src.model.training`).
+
 ## Known limitations (accurate as of this pass)
 
-- Calibration is **not** implemented (Day 6).
+- Calibration provided negligible benefit on this dataset/validation-set
+  size — reported honestly above, not treated as a problem to fix by
+  retuning against the test set.
 - The policy engine is **still** the Day 3 placeholder — no
   differentiated `root_cause → action` mapping exists (Day 7).
 - No counterfactual simulator or three-way experiment exists (Day 8–10).
@@ -134,6 +217,9 @@ Baseline before this pass: 34 passed, working tree clean at `ef09f4f`.
 - No frontend/dashboard exists (Day 13).
 - The pinned `requirements.txt` vs. Python 3.14 install mismatch (flagged
   during the earlier security audit) remains unresolved.
-- `RootCauseLogRegClassifier` reloads and revalidates the artifact from
-  disk on every `run_pipeline()` call — fine at this scale, unaddressed
-  because it isn't a correctness issue.
+- `RootCauseLogRegClassifier` / `CalibratedRootCauseClassifier` reload and
+  revalidate their artifacts from disk on every `run_pipeline()` call —
+  fine at this scale, unaddressed because it isn't a correctness issue.
+- The reliability diagram's mid-confidence bins are noisy (few samples per
+  bin) because the test set is only 242 rows and the model is already
+  highly accurate — a real property of the evaluation, not a plotting bug.

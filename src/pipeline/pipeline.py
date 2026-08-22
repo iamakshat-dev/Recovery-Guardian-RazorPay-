@@ -1,7 +1,7 @@
 """
-Recovery Guardian — Core Pipeline (Day 3, classifier updated Day 4)
+Recovery Guardian — Core Pipeline (Day 3, classifier updated Day 4 and Day 5)
 
-    PaymentEvent -> feature builder -> real Logistic Regression classifier
+    PaymentEvent -> feature builder -> calibrated Logistic Regression classifier
                  -> placeholder policy engine -> DecisionRecord -> SQLite
 
 This module is the single reusable entry point every caller goes through:
@@ -16,12 +16,18 @@ must not contain:
 `run_pipeline` operates purely on the typed domain objects in
 src/domain/models.py; it never sees a raw CSV row or an HTTP payload.
 
-Day 4 update: the classifier stage now uses the real, trained Logistic
+Day 4 update: the classifier stage used the real, trained Logistic
 Regression model (src/model/classifier.py) instead of the Day 3
-structural placeholder (src/model/placeholder_classifier.py). The
-placeholder remains in the codebase as a reference/test fixture but is no
-longer used in this production path. The policy engine is UNCHANGED —
-still the Day 3 placeholder (policy_version="placeholder-v1") — real
+structural placeholder (src/model/placeholder_classifier.py).
+
+Day 5 update: the classifier stage now uses the CALIBRATED classifier
+(src/model/calibrated_classifier.py), which wraps the same frozen Day 4
+model with a validation-fit sigmoid calibration layer — the underlying
+Logistic Regression is unchanged (see src/model/calibrate.py). Both the
+Day 3 placeholder and the Day 4 raw classifier remain in the codebase,
+fully intact and independently loadable, as reference/comparison fixtures
+— neither was modified to make this swap. The policy engine is UNCHANGED
+— still the Day 3 placeholder (policy_version="placeholder-v1") — real
 policy logic is later work (Day 7).
 """
 
@@ -35,7 +41,7 @@ from src.audit.logger import persist_decision_record
 from src.db import SCHEMA, get_connection
 from src.domain.models import DecisionRecord, PaymentEvent
 from src.features.build_features import build_features
-from src.model.classifier import RootCauseLogRegClassifier
+from src.model.calibrated_classifier import CalibratedRootCauseClassifier
 from src.policy.placeholder_engine import PolicyEngine
 
 
@@ -70,8 +76,8 @@ def run_pipeline(
     features_df = build_features(pd.DataFrame([event.model_dump()]), keep_label=False)
     features_row = features_df.iloc[0]
 
-    # 3-4. Real, trained Logistic Regression classifier -> RootCausePrediction.
-    classifier = RootCauseLogRegClassifier()
+    # 3-4. Calibrated Logistic Regression classifier -> RootCausePrediction.
+    classifier = CalibratedRootCauseClassifier()
     prediction = classifier.predict(features_row)
 
     # 5-6. Placeholder policy engine -> PolicyDecision.
