@@ -33,6 +33,20 @@ itself reads `src/policy/rules.yaml` via `load_policy_config()` inside
 `run_judge_demo.py` — this script never re-reads the policy YAML
 directly and never hardcodes a threshold number.
 
+Milestone 3 addition (Explainability + Incident Replay): extends the
+SAME two record types M2 already reads — no second artifact and no
+second scenario/incident data model:
+  - `_day14_scenario()` now additionally copies each scenario's
+    `explanation` object (`summary`, `safety_note`, `_provenance`) from
+    the SAME per-scenario dict (`s = day14[scenario_key]`) M2 already
+    reads every other scenario field from. There is no separate
+    "explanation artifact" to identity-cross-check against — it is the
+    same record, so no transaction_id/scenario mismatch is possible.
+  - `build_snapshot()`'s `day12` section now additionally copies the
+    before/incident/after failure-density windows and the simulated
+    recovery summary from the SAME `day12` dict already loaded for the
+    class-distribution/split-membership fields.
+
 Run:
     python3 scripts/generate_frontend_snapshot.py
 """
@@ -137,6 +151,21 @@ def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
     if amount_recovered is not None:
         amount_recovered = round(_validate_numeric(amount_recovered, f"{p}.outcome.amount_recovered"), 2)
 
+    explanation = s["explanation"]
+    # IMPORTANT, discovered during Milestone 3 raw-source verification:
+    # experiments/run_judge_demo.py writes the SAME fixed disclaimer
+    # string into explanation._provenance regardless of whether
+    # DeterministicFallbackProvider or ClaudeExplanationProvider actually
+    # produced the prose ("LLM prose (or deterministic fallback) --
+    # decision fields ... never from the provider"). The artifact does
+    # NOT record which provider actually ran for a given scenario. This
+    # script therefore does NOT guess/bucket it into "LLM-generated" vs
+    # "Deterministic" -- that would be inventing a fact the source
+    # doesn't contain. The raw disclaimer is passed through verbatim
+    # instead; see docs/architecture.md's Day 15 Milestone 3 section for
+    # the full discussion of this finding.
+    explanation_source_note = _validate_str(explanation["_provenance"], f"{p}.explanation._provenance")
+
     return {
         "scenarioLabel": _validate_str(s["scenario_label"], f"{p}.scenario_label"),
         "transactionId": _validate_str(s["transaction_id"], f"{p}.transaction_id"),
@@ -173,6 +202,11 @@ def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
                 s["safety_invariant_check"]["action_after_explanation"], f"{p}.safety_invariant_check.action_after_explanation"
             ),
             "unchanged": bool(s["safety_invariant_check"]["unchanged"]),
+        },
+        "explanation": {
+            "summary": _validate_str(explanation["summary"], f"{p}.explanation.summary"),
+            "safetyNote": _validate_str(explanation["safety_note"], f"{p}.explanation.safety_note"),
+            "sourceNote": explanation_source_note,
         },
     }
 
@@ -215,6 +249,18 @@ def build_snapshot() -> Dict[str, Any]:
     split = day12["split_membership"]
     classifier_summary = day12["classifier_summary"]
     safety = day12["webhook_ambiguity_safety"]
+    policy_summary = day12["policy_summary"]
+    sim_recovery = day12["simulated_recovery_summary"]
+
+    def _density_window(key: str) -> Dict[str, Any]:
+        w = incident_summary[key]
+        return {
+            "windowStart": _validate_str(w["window_start"], f"summary.{key}.window_start"),
+            "windowEnd": _validate_str(w["window_end"], f"summary.{key}.window_end"),
+            "windowMinutes": _validate_numeric(w["window_minutes"], f"summary.{key}.window_minutes"),
+            "failedEventCount": _validate_int(w["failed_event_count"], f"summary.{key}.failed_event_count"),
+            "failureDensityPerUnit": _validate_numeric(w["failure_density_per_unit"], f"summary.{key}.failure_density_per_unit"),
+        }
 
     incident_class_distribution = {
         "INFRASTRUCTURE": _validate_int(infra_summary["ground_truth_count"], "infrastructure_summary.ground_truth_count"),
@@ -247,6 +293,20 @@ def build_snapshot() -> Dict[str, Any]:
                 "start": incident_metadata["incident_window"]["start"],
                 "end": incident_metadata["incident_window"]["end"],
             },
+            "beforeWindow": {
+                "start": incident_metadata["before_window"]["start"],
+                "end": incident_metadata["before_window"]["end"],
+            },
+            "afterWindow": {
+                "start": incident_metadata["after_window"]["start"],
+                "end": incident_metadata["after_window"]["end"],
+            },
+            "metricType": _validate_str(incident_metadata["metric_type"], "metadata.metric_type"),
+            "datasetContainsSuccessfulTransactions": bool(incident_metadata["dataset_contains_successful_transactions"]),
+            "densityUnitMinutes": _validate_int(incident_summary["density_unit_minutes"], "summary.density_unit_minutes"),
+            "before": _density_window("before"),
+            "incident": _density_window("incident"),
+            "after": _density_window("after"),
             "incidentCount": _validate_int(incident_summary["incident_count"], "summary.incident_count"),
             "classDistribution": incident_class_distribution,
             "splitMembership": {
@@ -262,11 +322,28 @@ def build_snapshot() -> Dict[str, Any]:
                 "correct": _validate_int(classifier_summary["held_out_test"]["correctly_predicted_count"], "held_out_test.correctly_predicted_count"),
                 "total": _validate_int(classifier_summary["held_out_test"]["ground_truth_count"], "held_out_test.ground_truth_count"),
             },
+            "infrastructurePolicyActionDistribution": {
+                action: _validate_int(count, f"policy_summary.infrastructure_action_distribution.{action}")
+                for action, count in policy_summary["infrastructure_action_distribution"].items()
+            },
+            "infrastructureConfidenceThreshold": _validate_numeric(
+                policy_summary["infrastructure_confidence_threshold"], "policy_summary.infrastructure_confidence_threshold"
+            ),
             "webhookAmbiguitySafety": {
                 "caseCount": _validate_int(safety["case_count"], "webhook_ambiguity_safety.case_count"),
                 "blockReconcileCount": _validate_int(safety["block_reconcile_count"], "webhook_ambiguity_safety.block_reconcile_count"),
                 "deferRetryCount": _validate_int(safety["defer_retry_count"], "webhook_ambiguity_safety.defer_retry_count"),
                 "safetyPass": bool(safety["safety_pass"]),
+            },
+            "simulatedRecoverySummary": {
+                "transactionsEvaluated": _validate_int(sim_recovery["transactions_evaluated"], "simulated_recovery_summary.transactions_evaluated"),
+                "recoveredCount": _validate_int(sim_recovery["simulated_recovered_count"], "simulated_recovery_summary.simulated_recovered_count"),
+                "totalAmountRecovered": round(
+                    _validate_numeric(sim_recovery["simulated_total_amount_recovered"], "simulated_recovery_summary.simulated_total_amount_recovered"), 2
+                ),
+                "duplicateChargeRiskCount": _validate_int(
+                    sim_recovery["simulated_duplicate_charge_risk_count"], "simulated_recovery_summary.simulated_duplicate_charge_risk_count"
+                ),
             },
         },
         "day14": {

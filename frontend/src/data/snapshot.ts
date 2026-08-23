@@ -19,10 +19,10 @@
  *   python3 scripts/generate_frontend_snapshot.py
  */
 
-export const SNAPSHOT_GENERATED_AT = "2026-08-23T12:43:41.025538+00:00";
+export const SNAPSHOT_GENERATED_AT = "2026-08-23T13:51:14.984513+00:00";
 
 export const snapshot = {
-  "generatedAt": "2026-08-23T12:43:41.025538+00:00",
+  "generatedAt": "2026-08-23T13:51:14.984513+00:00",
   "sourceArtifacts": {
     "day9": "experiments/results/day9_seed_42_aggregate.json",
     "day12": "experiments/results/day12_incident_demo.json",
@@ -95,6 +95,38 @@ export const snapshot = {
       "start": "2026-08-15T22:10:00",
       "end": "2026-08-15T22:40:00"
     },
+    "beforeWindow": {
+      "start": "2026-08-15T21:10:00",
+      "end": "2026-08-15T22:10:00"
+    },
+    "afterWindow": {
+      "start": "2026-08-15T22:40:00",
+      "end": "2026-08-15T23:40:00"
+    },
+    "metricType": "failure_density",
+    "datasetContainsSuccessfulTransactions": false,
+    "densityUnitMinutes": 30,
+    "before": {
+      "windowStart": "2026-08-15T21:10:00",
+      "windowEnd": "2026-08-15T22:10:00",
+      "windowMinutes": 60.0,
+      "failedEventCount": 0,
+      "failureDensityPerUnit": 0.0
+    },
+    "incident": {
+      "windowStart": "2026-08-15T22:10:00",
+      "windowEnd": "2026-08-15T22:40:00",
+      "windowMinutes": 30.0,
+      "failedEventCount": 110,
+      "failureDensityPerUnit": 110.0
+    },
+    "after": {
+      "windowStart": "2026-08-15T22:40:00",
+      "windowEnd": "2026-08-15T23:40:00",
+      "windowMinutes": 60.0,
+      "failedEventCount": 3,
+      "failureDensityPerUnit": 1.5
+    },
     "incidentCount": 110,
     "classDistribution": {
       "INFRASTRUCTURE": 73,
@@ -117,11 +149,22 @@ export const snapshot = {
       "correct": 15,
       "total": 15
     },
+    "infrastructurePolicyActionDistribution": {
+      "DEFER_RETRY": 61,
+      "HUMAN_REVIEW": 12
+    },
+    "infrastructureConfidenceThreshold": 0.75,
     "webhookAmbiguitySafety": {
       "caseCount": 1,
       "blockReconcileCount": 1,
       "deferRetryCount": 0,
       "safetyPass": true
+    },
+    "simulatedRecoverySummary": {
+      "transactionsEvaluated": 110,
+      "recoveredCount": 55,
+      "totalAmountRecovered": 146160.09,
+      "duplicateChargeRiskCount": 0
     }
   },
   "day14": {
@@ -158,6 +201,11 @@ export const snapshot = {
           "actionBeforeExplanation": "BLOCK_RECONCILE",
           "actionAfterExplanation": "BLOCK_RECONCILE",
           "unchanged": true
+        },
+        "explanation": {
+          "summary": "The model classified this payment as WEBHOOK_AMBIGUITY with 0.94 probability. The policy engine selected BLOCK_RECONCILE because the payment state is unresolved, which is a hard safety override regardless of confidence. Simulation estimates no recovery under this action \u2014 a counterfactual estimate, not an observed result.",
+          "safetyNote": "Payment state is unresolved. Automated retry is not permitted for WEBHOOK_AMBIGUITY under any confidence level \u2014 BLOCK_RECONCILE is a hard safety rule, not a confidence-gated business decision.",
+          "sourceNote": "LLM prose (or deterministic fallback) \u2014 decision fields below are re-derived from evidence, never from the provider"
         }
       },
       "infrastructure_high_confidence": {
@@ -192,6 +240,11 @@ export const snapshot = {
           "actionBeforeExplanation": "DEFER_RETRY",
           "actionAfterExplanation": "DEFER_RETRY",
           "unchanged": true
+        },
+        "explanation": {
+          "summary": "The model classified this payment as INFRASTRUCTURE with 0.98 probability. The policy engine selected DEFER_RETRY because the calibrated confidence met the configured INFRASTRUCTURE threshold (threshold 0.75). Simulation estimates a recovery of 731.93 under this action \u2014 this is a counterfactual estimate, not an observed result.",
+          "safetyNote": "Automated retry was authorized under the configured policy threshold.",
+          "sourceNote": "LLM prose (or deterministic fallback) \u2014 decision fields below are re-derived from evidence, never from the provider"
         }
       },
       "infrastructure_low_confidence": {
@@ -226,6 +279,11 @@ export const snapshot = {
           "actionBeforeExplanation": "HUMAN_REVIEW",
           "actionAfterExplanation": "HUMAN_REVIEW",
           "unchanged": true
+        },
+        "explanation": {
+          "summary": "The model classified this payment as INFRASTRUCTURE with 0.70 probability. The policy engine selected HUMAN_REVIEW because the calibrated confidence was below the configured threshold for this root cause (threshold 0.75). Simulation estimates no recovery under this action \u2014 a counterfactual estimate, not an observed result.",
+          "safetyNote": "Automated recovery was not authorized; human handling is required per policy.",
+          "sourceNote": "LLM prose (or deterministic fallback) \u2014 decision fields below are re-derived from evidence, never from the provider"
         }
       }
     }
