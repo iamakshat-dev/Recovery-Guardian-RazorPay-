@@ -1048,3 +1048,239 @@ review. None of these were built, attempted, or claimed on Day 11.
   timestamp precision) — documented, not hidden.
 - No live Razorpay integration, credentials, or network calls exist
   anywhere in this module or its tests.
+
+## Day 12 — Incident Scenario Replay
+
+Day 12 is a demo/application layer over the already-frozen intelligence
+stack (Days 4-11). It is **replay, not injection**: every transaction
+evaluated is a real, pre-existing row of the frozen
+`data/synthetic_events.csv`. Nothing was regenerated, retrained, or
+re-tuned. `data/generate_data.py` was not modified.
+
+    existing Day 1 incident window
+        -> real frozen feature builder
+        -> frozen calibrated classifier
+        -> root-cause prediction + calibrated probability
+        -> frozen Day 7 policy engine
+        -> recovery action
+
+Entry point: `experiments/run_incident_demo.py`. Tests:
+`tests/test_incident_demo.py`. Output artifact:
+`experiments/results/day12_incident_demo.json`.
+
+### 1. Why replay, not injection
+
+The incident burst already exists — `data/generate_data.py`'s
+`generate_dataset()` deliberately injects 110 transactions into a fixed
+30-minute window (`2026-08-15 22:10` – `22:40`) with an
+INFRASTRUCTURE-heavy (but deliberately impure) class mix, specifically so
+a reproducible incident scenario exists for this kind of demo. Day 12
+reads that existing window rather than generating a new one, so the
+scenario is exactly reproducible from the same frozen CSV every time.
+
+### 2. Exact verified incident window
+
+Verified directly against the frozen dataset (not assumed):
+
+- Start: `2026-08-15T22:10:00`, end: `2026-08-15T22:40:00` (inclusive
+  both ends — matches `data/generate_data.py`'s own `summarize()`
+  convention).
+- Transaction count: **110** (matches `generate_dataset()`'s
+  `burst_rows=110` default exactly).
+- Class distribution: INFRASTRUCTURE 73, INSUFFICIENT_FUNDS 15,
+  CARD_DECLINE 9, OTP_TIMEOUT 9, USER_ABANDONMENT 3, WEBHOOK_AMBIGUITY 1.
+
+`experiments/run_incident_demo.py`'s `verify_incident_window()` raises
+(stops) if the actual count in the frozen CSV ever differs from 110 —
+the window is verified at run time, never hardcoded blindly.
+
+### 3. Before/during/after window definitions
+
+Documented, consistent convention (Day 12 spec section 7):
+
+- **INCIDENT**: `[start, end]` — inclusive-inclusive.
+- **BEFORE**: `[start-60min, start)` — half-open, excludes `start` so it
+  never overlaps the incident window's own inclusive start.
+- **AFTER**: `(end, end+60min]` — half-open, excludes `end` so it never
+  overlaps the incident window's own inclusive end.
+
+The three windows are non-overlapping by construction (verified by
+`test_comparison_windows_are_non_overlapping`).
+
+### 4. Whether a true failure rate exists
+
+**No.** `data/generate_data.py` generates only failed-payment events —
+every row carries an `actual_root_cause` failure label; there is no
+successful-transaction row anywhere in the schema (`raw_df.columns` has
+no `status`/`success`/`outcome` field). A percentage of
+`failed rows / total rows` would be 100% by construction and would not
+measure anything about the incident.
+
+### 5. Failure density instead of failure rate
+
+Day 12 reports **failure density** — failed transactions per fixed unit
+of time (normalized to "per 30 minutes" so the 30-minute incident window
+and the two 60-minute before/after windows are directly comparable).
+Never described as a percentage or as "failure rate."
+
+### 6. Actual measured density values
+
+From the frozen dataset, this specific run:
+
+| Window   | Duration | Failed events | Density (per 30 min) |
+|----------|----------|----------------|------------------------|
+| Before   | 60 min   | 0              | 0.0                    |
+| Incident | 30 min   | 110            | 110.0                  |
+| After    | 60 min   | 3              | 1.5                    |
+
+The `before` window's zero count is an honest artifact of the sparse
+background rate (≈1500 background rows spread across 21 days, ≈3
+rows/hour expected on average) landing on zero in this specific hour by
+chance — not a data or measurement error. It is reported as measured,
+not smoothed or explained away.
+
+### 7. Ground-truth vs prediction separation
+
+`actual_root_cause` is read from the raw CSV row **only** for the
+returned per-transaction record. `PaymentEvent` has no field for it at
+all (`src/domain/models.py`) — `src/ingestion/synthetic_adapter.py`'s
+`synthetic_to_payment_event()` never reads it — so `build_features()`,
+the calibrated classifier, and the Day 7 policy engine structurally
+cannot see it. Verified directly by
+`tests/test_incident_demo.py::test_actual_root_cause_does_not_affect_prediction_or_policy`
+(constructs otherwise-identical evidence differing only in the
+evaluation-only label; prediction/probability/policy action are
+unchanged) and
+`test_synthetic_to_payment_event_never_reads_actual_root_cause`.
+
+### 8. Train/validation/test membership of incident rows
+
+Reproduces the **exact** Day 4 split
+(`src.model.splitting.train_val_test_split`, `random_state=42`) — not a
+new split. Incident-window membership:
+
+- TRAIN: 79 (71.8%)
+- VALIDATION: 13 (11.8%)
+- TEST: 18 (16.4%)
+
+**A majority of incident-window rows are TRAIN-split transactions.**
+Per the Day 12 spec, this is explicitly disclosed: the full-window
+classifier result below is a **replay behavior demonstration**, not an
+out-of-sample generalization claim. The held-out TEST subset (18
+transactions) is the defensible out-of-sample view.
+
+### 9. Full-window classifier behavior (INFRASTRUCTURE)
+
+All 110 incident-window transactions, ground-truth INFRASTRUCTURE cases
+(73 of them): **73/73 correctly predicted INFRASTRUCTURE** — precision
+1.0, recall 1.0, calibrated-probability range [0.5245, 0.9932].
+
+### 10. Held-out-test classifier behavior (INFRASTRUCTURE)
+
+Restricted to the 18 incident-window transactions in the original Day 4
+TEST split; 15 of those are ground-truth INFRASTRUCTURE: **15/15
+correctly predicted INFRASTRUCTURE** — precision 1.0, recall 1.0,
+probability range [0.5245, 0.9901]. This is the out-of-sample-relevant
+result; the full-window figure above is not.
+
+### 11. Actual Day 7 confidence threshold
+
+`src/policy/rules.yaml`'s `confidence_thresholds.INFRASTRUCTURE` = **0.75**
+(loaded via `src.policy.engine.load_policy_config()`, never assumed or
+hardcoded in the Day 12 script).
+
+### 12. Infrastructure policy behavior
+
+Across the 73 ground-truth INFRASTRUCTURE transactions: `DEFER_RETRY`
+61, `HUMAN_REVIEW` 12. Every `DEFER_RETRY` corresponds to a calibrated
+probability ≥ 0.75; every `HUMAN_REVIEW` corresponds to a probability
+below 0.75 (`LOW_MODEL_CONFIDENCE`, per `src/policy/engine.py`'s
+`_decide_by_root_cause`). The policy threshold was not changed to make
+this result look better.
+
+### 13. WEBHOOK_AMBIGUITY safety result
+
+Exactly 1 WEBHOOK_AMBIGUITY case in the incident window.
+`policy_action == BLOCK_RECONCILE` for that case; `DEFER_RETRY` count =
+0. `safety_pass = True`. The incident window did not relax the hard
+safety invariant. `experiments/run_incident_demo.py`'s
+`build_webhook_ambiguity_safety_summary()` raises immediately if this
+invariant is ever violated — no test, filter, or config was adjusted to
+force this result.
+
+### 14. Non-infrastructure diagnostic behavior
+
+All 37 non-INFRASTRUCTURE incident-window transactions (CARD_DECLINE 9,
+INSUFFICIENT_FUNDS 15, OTP_TIMEOUT 9, USER_ABANDONMENT 3,
+WEBHOOK_AMBIGUITY 1) were correctly predicted as their own class — **zero
+transactions were misclassified as INFRASTRUCTURE** merely because they
+occurred during the incident. `incident_active`, timestamp membership,
+and `actual_root_cause` are never used to override the classifier
+anywhere in the replay path.
+
+### 15. State-isolation mechanism reused from Day 9
+
+`experiments/run_incident_demo.py`'s `replay_transaction()` calls
+`RulesPolicyEngine.decide(..., already_executed_actions=frozenset(),
+now=EXPERIMENT_EVALUATION_TIME)` — the exact same isolation pattern as
+Day 9's `GuardianStrategy` (`src/experiment/strategies.py`), including
+importing the same `EXPERIMENT_EVALUATION_TIME` constant rather than
+declaring a new one. No second idempotency/state mechanism was invented.
+Verified by `test_repeated_replay_of_same_transaction_does_not_change_its_action`
+(same transaction replayed three times in-process, identical result
+every time) and `test_guardian_state_isolation_mechanism_is_reused_not_reinvented`.
+
+### 16. Deterministic replay methodology
+
+The script performs no database writes and reads no wall clock in its
+substantive computation. The only per-run randomness anywhere
+(`src.recovery.simulator.estimate_outcome`'s internal draw, used only by
+the optional simulation below) is seeded deterministically via
+`src.experiment.random_state.derive_transaction_seed()` — the exact Day 9
+CRN mechanism, unmodified. Verified by running the script as two
+genuinely separate OS processes and diffing the output JSON
+byte-for-byte: **identical** (see Reproducibility below). No wall-clock
+run metadata (`generated_at` or similar) is included in the artifact at
+all, so there was nothing to exclude from that comparison.
+
+### 17. Optional simulation results
+
+Implemented (Day 12 spec section 20, optional). Reuses
+`src.recovery.simulator.estimate_outcome()` (Day 8, unmodified) with a
+per-transaction seed from `src.experiment.random_state.derive_transaction_seed()`
+(Day 9's CRN mechanism, unmodified), evaluated against each
+transaction's actual frozen-policy-chosen action. Every resulting figure
+is labeled **SIMULATED / COUNTERFACTUAL** in both the JSON artifact
+(`simulated_recovery_summary`) and the per-transaction records
+(`simulated_recovered`, `simulated_amount_recovered`,
+`simulated_duplicate_charge_risk`) — never described as observed,
+actual, or real Razorpay revenue. Does not read from or write to any Day
+9/10 result file.
+
+### 18. Limitations
+
+- **Training-membership limitation**: a majority (71.8%) of
+  incident-window transactions are in the classifier's TRAIN split. The
+  full-window classifier/policy results above are a replay-behavior
+  demonstration, not an out-of-sample generalization claim — the 18-row
+  held-out TEST subset is the defensible generalization-oriented view,
+  and even that is a small sample.
+- **Synthetic-data limitation**: every transaction is synthetic
+  (`data/generate_data.py`); no real Razorpay production traffic was
+  used anywhere in Day 12.
+- **Failure-density-not-rate limitation**: the dataset contains no
+  successful-transaction rows, so no genuine failure-rate percentage can
+  be computed; density (events per unit time) is reported instead.
+- **Monitoring limitation**: this is a historical replay of an existing
+  dataset window, not a live incident detector — no real-time monitoring
+  or production-detection capability exists or is implied.
+- **Representative-data limitation**: the incident scenario is a
+  designed synthetic burst, not evidence of how a real Razorpay
+  infrastructure incident would present.
+- **Sample-size limitation**: several per-class counts in the incident
+  window are small (e.g. exactly 1 WEBHOOK_AMBIGUITY case, 3
+  USER_ABANDONMENT cases) — single-digit counts are reported as such,
+  not smoothed into a percentage that would overstate precision.
+- **Simulation limitation**: the optional recovery simulation is a
+  counterfactual estimate from the frozen Day 8 simulator, not a
+  measurement of real recovered revenue.

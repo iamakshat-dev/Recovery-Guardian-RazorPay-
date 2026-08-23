@@ -582,3 +582,77 @@ webhook-signature verification anywhere in this project.
   hidden.
 - No live Razorpay integration, credentials, authentication, or webhook
   verification exists.
+
+## Day 12 — Incident Scenario Replay
+
+- **Status: COMPLETE.**
+- Artifact: `experiments/results/day12_incident_demo.json`. Entry point:
+  `experiments/run_incident_demo.py`. Tests: `tests/test_incident_demo.py`.
+- Incident window (verified, not assumed): `2026-08-15T22:10:00` –
+  `2026-08-15T22:40:00` inclusive, 110 transactions (matches
+  `data/generate_data.py`'s existing injected burst exactly).
+  `data/generate_data.py` and the dataset itself were NOT modified or
+  regenerated.
+- Metric type: **failure density** (events per 30 min), not failure
+  rate — the dataset contains only failed-payment rows, no
+  success/status column exists. Before 0.0, incident 110.0, after 1.5
+  (per 30 min).
+- Split membership of the 110 incident-window transactions: TRAIN 79
+  (71.8%), VALIDATION 13 (11.8%), TEST 18 (16.4%). Majority-TRAIN
+  disclosed explicitly — the full-window result is a replay-behavior
+  demonstration, not an out-of-sample generalization claim; the 18-row
+  held-out TEST subset is reported separately as the defensible view.
+- Infrastructure classifier result: full-window 73/73 ground-truth
+  INFRASTRUCTURE correctly predicted (precision/recall 1.0); held-out
+  test subset 15/15 correctly predicted (precision/recall 1.0).
+- Infrastructure policy result: 61 `DEFER_RETRY` / 12 `HUMAN_REVIEW`
+  among the 73 ground-truth INFRASTRUCTURE cases, split exactly at the
+  real `src/policy/rules.yaml` threshold (0.75) — not modified.
+- Non-infrastructure diagnostic: all 37 non-INFRASTRUCTURE incident-window
+  transactions correctly predicted as their own class; zero
+  misclassified as INFRASTRUCTURE merely for occurring during the
+  incident.
+- **Safety result**: the single WEBHOOK_AMBIGUITY case in the window
+  produced `BLOCK_RECONCILE`; zero `DEFER_RETRY`. Safety invariant held
+  during the incident.
+- Ground-truth leakage: `actual_root_cause` proven structurally
+  incapable of reaching `PaymentEvent`/`build_features`/classifier/policy
+  (no such field on `PaymentEvent`); direct leakage regression test
+  passes.
+- State isolation: reuses Day 9's `GuardianStrategy` mechanism exactly
+  (`already_executed_actions=frozenset()`, the same
+  `EXPERIMENT_EVALUATION_TIME` constant) — no new mechanism invented.
+- Reproducibility: two separate `python3` processes running the script
+  produced byte-identical `day12_incident_demo.json` output. No
+  wall-clock run metadata is included in the artifact.
+- Optional Day 8/9-reused recovery simulation implemented; all figures
+  labeled SIMULATED/COUNTERFACTUAL, structurally separate from measured
+  classifier/policy metrics, and does not touch any Day 9/10 result file.
+- Test count: 222 → 242 passed (20 new Day 12 tests). Day 7 (54), Day 9
+  (50), Day 10 (10), Day 11 (30) regression suites all re-run and green.
+- Frozen firewall verified via `git diff 32a2e05` against
+  `data/generate_data.py`, the dataset, `src/model`, `src/features`,
+  `src/policy`, `src/recovery`, `experiments/day9_experiment_config.yaml`,
+  `experiments/run_day9_experiment.py`, `experiments/run_day10_analysis.py`,
+  all Day 9/10 result JSONs, and `src/ingestion/razorpay_adapter.py` — all
+  empty.
+- No frontend, dashboard, LLM layer, live Razorpay integration, or Day 13
+  work started.
+
+### Known limitations (Day 12)
+
+- A majority of incident-window transactions are TRAIN-split — the
+  full-window classifier result is a replay demonstration, not a
+  generalization claim; the held-out TEST subset (18 rows) is small.
+- All data is synthetic; no real Razorpay production traffic was used.
+- No true failure rate is computable from this dataset (no
+  successful-transaction rows) — failure density is reported instead.
+- This is a historical replay, not a live incident detector or
+  production monitoring capability.
+- The incident scenario is a designed synthetic burst, not evidence
+  about real Razorpay infrastructure incidents.
+- Several per-class counts in the window are small (e.g. 1
+  WEBHOOK_AMBIGUITY case, 3 USER_ABANDONMENT cases) and are reported as
+  raw counts, not smoothed into misleadingly precise percentages.
+- The optional recovery simulation is a counterfactual estimate, not
+  observed recovered revenue.
