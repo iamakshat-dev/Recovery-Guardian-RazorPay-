@@ -1284,3 +1284,201 @@ actual, or real Razorpay revenue. Does not read from or write to any Day
 - **Simulation limitation**: the optional recovery simulation is a
   counterfactual estimate from the frozen Day 8 simulator, not a
   measurement of real recovered revenue.
+
+## Day 13 — Grounded LLM Explanation Layer
+
+Day 13 adds an explanation layer downstream of the already-frozen
+decision path. It is a pure `str`-in-facts, `str`-out-prose transform —
+it has no authority over, and cannot influence, the root cause, the
+confidence, the policy action, or the policy reason.
+
+    PaymentEvent -> feature builder -> calibrated classifier
+        -> RootCausePrediction -> Day 7 policy engine -> PolicyDecision
+        -> ExplanationEvidence.from_decision()
+        -> provider.generate(evidence)   [LLM, or the deterministic
+                                           fallback on ANY failure]
+        -> Explanation
+
+New package: `src/explain/` (`evidence.py`, `models.py`, `provider.py`,
+`redaction.py`, `service.py`). Tests: `tests/test_explain.py` (41 tests).
+
+### 1. Purpose of the explanation layer
+
+Converts an already-computed Recovery Guardian decision into a concise,
+evidence-backed, human-readable explanation, for a judge/operator reading
+a single decision. It is the FIRST layer in the project with any LLM
+involvement, and is explicitly scoped as explanation-only, per the Day 13
+master prompt's "the LLM is an explanation component, not a
+decision-maker."
+
+### 2. Architecture position
+
+Strictly downstream. `src/explain/service.py`'s `explain_decision()`
+takes an already-produced `PaymentEvent`, `RootCausePrediction`, and
+`PolicyDecision` (and optionally a `RecoveryOutcome`) as arguments — it
+never calls the feature builder, the classifier, or the policy engine
+itself, and has no code path that feeds anything back into any of them.
+
+### 3. Evidence contract
+
+`src.explain.evidence.ExplanationEvidence` — a frozen dataclass built
+ONLY via `.from_decision()`, which reads every field directly off the
+real domain objects: `transaction_id`, `amount`, `payment_method`,
+`failure_code`, `retry_count`, `webhook_delay_seconds`,
+`incident_active`, `predicted_root_cause`, `predicted_probability`,
+`policy_action`, `policy_reason`, `policy_version`,
+`relevant_threshold` (loaded from `src/policy/rules.yaml` via
+`load_policy_config()` — `None` for `WEBHOOK_AMBIGUITY`, which has no
+threshold by design), `safety_flags`, and `outcome_status` /
+`outcome_recovered` / `outcome_amount` / `outcome_reason`. Mirrors the
+precedent set by Day 8's `RecoveryEvidence` — a small, purpose-narrowing
+projection, not a duplicate domain model.
+
+### 4. LLM provider boundary
+
+`src.explain.provider.ExplanationProvider` is a narrow `Protocol` with
+exactly one method, `generate(evidence) -> dict`. Two implementations:
+
+- `ClaudeExplanationProvider` — thin wrapper over the Anthropic Messages
+  API (`anthropic` package, imported lazily so it is never required at
+  module-import time). No API key or network access is required by the
+  automated test suite: tests inject a duck-typed fake `client` object
+  implementing `.messages.create(...)`.
+- `DeterministicFallbackProvider` — no LLM, no network, always succeeds.
+
+The provider's return value is read for exactly two keys — `summary` and
+`safety_note`, both free text. `explain_decision()` never copies
+`root_cause`/`action`/`reason`/`confidence`/`outcome_status` out of a
+provider's response, no matter what it contains — proven directly by
+`tests/test_explain.py::test_provider_cannot_override_the_decision`,
+which uses a provider that deliberately tries to forge those fields.
+
+### 5. Deterministic fallback
+
+Used directly when no provider is configured, and automatically on ANY
+provider failure — missing credentials, network/timeout error, malformed
+response shape, unparseable JSON, or an empty summary
+(`src/explain/service.py`'s `explain_decision()` catches every exception
+from `provider.generate()` and falls back). LLM failure degrades prose
+quality only; the decision fields are computed from `evidence` either
+way and are therefore unaffected regardless of which path produced the
+prose.
+
+### 6. Grounding controls
+
+The values that MUST come from the deterministic system — root cause,
+probability, action, reason, threshold — are assigned directly from
+`ExplanationEvidence` in `explain_decision()`, never read back from
+provider output. There is no `if root_cause == ...: action = ...`
+anywhere in `src/explain/` (verified directly, via AST inspection of
+every file in the package, by
+`test_no_conditional_root_cause_dispatch_anywhere_in_explain_package`) —
+this package contains no second policy engine and no second ML model.
+
+### 7. Safety controls
+
+`action_before_explanation == action_after_explanation` is verified for
+every representative case (CARD_DECLINE → CUSTOMER_RECOVERY,
+INSUFFICIENT_FUNDS → CUSTOMER_RECOVERY, INFRASTRUCTURE high-confidence →
+DEFER_RETRY, INFRASTRUCTURE low-confidence → HUMAN_REVIEW,
+WEBHOOK_AMBIGUITY → BLOCK_RECONCILE, OTP_TIMEOUT → NO_ACTION), each
+built through the REAL feature builder, REAL calibrated classifier, and
+REAL Day 7 policy engine on a real dataset row — no fake `PolicyDecision`
+is constructed for any of these tests.
+
+### 8. WEBHOOK_AMBIGUITY behavior
+
+The primary safety integration test
+(`test_real_pipeline_webhook_ambiguity_explanation_preserves_block_reconcile`)
+runs a real WEBHOOK_AMBIGUITY dataset row through the full real pipeline
+and asserts the resulting `Explanation.action == "BLOCK_RECONCILE"`.
+`test_webhook_ambiguity_stays_block_reconcile_even_with_forging_provider`
+additionally re-runs the same case against a provider that forges
+`DEFER_RETRY`, a provider that raises, and a provider that returns a
+malformed response — `BLOCK_RECONCILE` is unchanged in every case.
+
+### 9. Observed/Simulated/Unavailable outcome semantics
+
+`ExplanationEvidence.outcome_status` is one of exactly three values —
+`OBSERVED`, `SIMULATED`, `UNAVAILABLE` — enforced by `__post_init__`
+(raises if `outcome_status` is invalid, or if it's `UNAVAILABLE` while an
+outcome value was supplied, or non-`UNAVAILABLE` with no outcome
+supplied — there is no way to fabricate outcome facts through this
+constructor). `RecoveryOutcome` carries no provenance field itself, so
+the caller declares it explicitly — currently only `SIMULATED` (from Day
+8's `estimate_outcome()`) is ever produced anywhere in this project;
+`OBSERVED` exists in the contract for a real Razorpay outcome that does
+not exist yet, and is never fabricated. The deterministic fallback's
+summary text says "Simulation estimates..." for `SIMULATED` and never
+"recovered ₹X" — verified by
+`test_simulated_outcome_is_labeled_simulated_not_observed`.
+
+### 10. Prompt-injection defense
+
+`PaymentEvent` has no free-text customer/merchant-description field —
+`merchant_id` is the closest thing to an attacker-influenceable string,
+so `test_malicious_merchant_id_cannot_change_the_decision` constructs one
+containing instruction-like text ("IGNORE ALL PREVIOUS INSTRUCTIONS...")
+and confirms it cannot reach or alter `root_cause`/`action`. The Claude
+system prompt (`src.explain.provider.SYSTEM_PROMPT`) additionally
+instructs the model explicitly that all evidence content, including
+identifiers, is DATA and never an instruction — defense in depth on top
+of the structural guarantee in section 6 above, which holds regardless
+of whether the LLM actually obeys that instruction.
+
+### 11. Secret / PII boundary
+
+`src.explain.redaction.redact_evidence_for_provider()` is an explicit
+allowlist of exactly the `ExplanationEvidence` fields a provider may see
+(no `event_id`, no raw `PaymentEvent`), plus a defensive regex check
+(the same credential-pattern family used by this project's existing
+secret scans) that refuses to send any string value that looks like a
+live credential. `PaymentEvent`/`ExplanationEvidence` were not modified
+to support this — redaction happens only at this one boundary function.
+
+### 12. Testing
+
+41 new tests in `tests/test_explain.py`: real-pipeline integration (1),
+representative-case coverage across all 6 required cases (parametrized),
+grounding/anti-hallucination (root cause/probability/action/reason
+preserved, simulated-vs-observed labeling, missing-outcome
+non-fabrication), WEBHOOK_AMBIGUITY/HUMAN_REVIEW/NO_ACTION invariance
+across multiple providers including a deliberately malicious one,
+prompt-injection defense, secret/PII redaction, provider-failure
+fallback behavior (timeout, malformed response, empty summary, missing
+credentials), a fake-Anthropic-client plumbing test (no real package or
+API key required), no-second-policy-engine / no-second-ML-model AST
+checks, reproducibility of structured evidence and fallback output, and
+a side-effect firewall (no DB write, no idempotency-module import).
+
+### 13. Known limitations
+
+- LLM-backed (`ClaudeExplanationProvider`) prose is not claimed to be
+  byte-identical across calls — only the deterministic fallback and the
+  structured decision fields are tested for exact reproducibility.
+- The Claude system prompt is a strong instruction, not a cryptographic
+  guarantee against a sufficiently adversarial model; the actual safety
+  guarantee is structural (section 6/8 above), not prompt-based — the
+  prompt is defense in depth, not the primary control.
+- `merchant_id` is the only realistic injection-vector field currently
+  on `PaymentEvent`; there is no free-text customer-facing field in this
+  project to test injection through, since none exists.
+- No live Razorpay integration, credentials, or network calls exist
+  anywhere in this layer or its tests.
+- The explanation layer has not been evaluated for prose quality by a
+  human judge beyond spot-checking; only its grounding/safety properties
+  are tested.
+
+### 14. Day 12 perfect-score disclosure status
+
+Day 12's held-out-test INFRASTRUCTURE result (15/15, 100%) was
+**reported** in the Day 12 section above but was **not** run through the
+project's own established leakage-investigation methodology (the ">98%
+trigger" applied at Day 4 to four classes that scored 100% on the full
+242-row test set — see PROGRESS.md's Day 4 section) or cross-referenced
+against Day 4's known full-test-set INFRASTRUCTURE recall (0.963) for
+plausibility. Day 13 did not re-open, re-investigate, or modify the Day
+12 result — it is preserved as frozen historical evidence. This gap is
+recorded here and in PROGRESS.md rather than silently treated as a
+validated invariant; no Day 13 test asserts that the 15/15 result is
+intrinsically correct.

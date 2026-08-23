@@ -656,3 +656,83 @@ webhook-signature verification anywhere in this project.
   raw counts, not smoothed into misleadingly precise percentages.
 - The optional recovery simulation is a counterfactual estimate, not
   observed recovered revenue.
+
+## Day 13 — Grounded LLM Explanation Layer
+
+- **Status: COMPLETE.**
+- New package: `src/explain/` (`evidence.py`, `models.py`, `provider.py`,
+  `redaction.py`, `service.py`). Tests: `tests/test_explain.py`.
+- Pre-flight integrity check (mandatory per the Day 13 prompt): Day 12's
+  15/15 held-out INFRASTRUCTURE result was reported but was **not**
+  previously run through the project's own established >98%
+  leakage-investigation trigger (applied at Day 4 to the four classes
+  that hit 100% on the full 242-row test set) or cross-checked against
+  Day 4's known full-test-set INFRASTRUCTURE recall (0.963). **CASE B**:
+  Day 13 did not investigate or modify Day 12; the result is preserved
+  as frozen historical evidence, and this gap is recorded honestly
+  rather than papered over. No Day 13 test claims the 15/15 result is
+  intrinsically valid.
+- Architecture: `ExplanationEvidence.from_decision()` (built only from
+  the real, already-computed `PaymentEvent`/`RootCausePrediction`/
+  `PolicyDecision`) → `provider.generate(evidence)` (LLM or deterministic
+  fallback) → `Explanation`. The orchestrator
+  (`src.explain.service.explain_decision()`) reads only `summary`/
+  `safety_note` from provider output; every decision field
+  (`root_cause`, `confidence`, `action`, `reason`, `outcome_status`) is
+  assigned directly from evidence, never from the provider — verified
+  directly by a test using a provider that deliberately tries to forge
+  a different action.
+- Provider: `ClaudeExplanationProvider` (Anthropic Messages API, lazily
+  imported, no API key required at import/construction time) plus a
+  `DeterministicFallbackProvider` used whenever no provider is
+  configured or on ANY provider failure. No API keys, network access, or
+  credentials are required by the automated test suite — tests inject a
+  duck-typed fake Anthropic client.
+- Safety result: the real feature builder → real calibrated classifier →
+  real Day 7 policy engine → explanation integration test confirms
+  `WEBHOOK_AMBIGUITY → BLOCK_RECONCILE` is preserved through the
+  explanation layer, including against a provider that deliberately
+  tries to forge `DEFER_RETRY`, a raising provider, and a malformed-
+  response provider. All 6 representative cases (CARD_DECLINE,
+  INSUFFICIENT_FUNDS, INFRASTRUCTURE high/low confidence,
+  WEBHOOK_AMBIGUITY, NO_ACTION) run through the real pipeline and
+  confirm root cause/action/reason/probability are preserved exactly.
+- Outcome provenance: `OBSERVED`/`SIMULATED`/`UNAVAILABLE` enforced by
+  the evidence constructor itself (raises on an inconsistent
+  status/outcome pairing) — simulated Day 8 outcomes are always
+  described as "Simulation estimates...", never as observed recovered
+  revenue.
+- Prompt-injection defense: `merchant_id` (the only realistic
+  free-text-shaped `PaymentEvent` field) constructed with
+  instruction-like text; the decision path is unaffected. Secret/PII
+  redaction: explicit field allowlist plus a credential-pattern refusal
+  check at the provider boundary.
+- Test count: 242 → 283 passed (41 new Day 13 tests). Day 7 (54), Day 9
+  (50), Day 10 (10), Day 11 (30), Day 12 (20) regression suites all
+  re-run and green. Day 12 incident demo re-run directly and confirmed
+  unchanged (110 transactions, same split, safety PASS).
+- Frozen firewall verified via `git diff f430401` against `src/model`,
+  `src/features`, `src/policy`, `src/recovery`, `data`, `experiments`,
+  `src/ingestion/razorpay_adapter.py`, `experiments/run_incident_demo.py`,
+  and `tests/test_incident_demo.py` — all empty.
+- No frontend, dashboard, live Razorpay integration, model tuning, or
+  Day 14 work started.
+
+### Known limitations (Day 13)
+
+- LLM-backed prose is not claimed to be byte-identical across calls;
+  only the deterministic fallback and structured decision fields are
+  tested for exact reproducibility.
+- The Claude system prompt is defense in depth, not the primary safety
+  guarantee — the actual guarantee is structural (the orchestrator never
+  reads decision fields from provider output).
+- `merchant_id` is the only realistic prompt-injection vector currently
+  available on `PaymentEvent`; no free-text customer-facing field exists
+  in this project.
+- No live Razorpay integration, credentials, or network calls exist
+  anywhere in this layer.
+- Explanation prose quality has not been evaluated by a human judge
+  beyond spot-checking; only grounding/safety properties are tested.
+- Day 12's 15/15 held-out INFRASTRUCTURE result remains un-investigated
+  for leakage/generalization plausibility (see pre-flight check above) —
+  carried forward as an open gap, not resolved by Day 13.
