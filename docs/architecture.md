@@ -1482,3 +1482,135 @@ plausibility. Day 13 did not re-open, re-investigate, or modify the Day
 recorded here and in PROGRESS.md rather than silently treated as a
 validated invariant; no Day 13 test asserts that the 15/15 result is
 intrinsically correct.
+
+## Day 14 — Final Productization + Judge-Facing Evidence
+
+Day 14 makes no changes to the intelligence or safety behavior measured
+by Days 4-13. It productizes what already exists: a judge-facing demo
+runner, a complete README, and a documentation-consistency audit. If any
+proposed change during Day 14 touched a frozen subsystem, the instruction
+was to stop and report it out of scope — no such change was needed or
+made.
+
+### 1. Product surface audit (before building anything)
+
+Inspected before writing any new code:
+
+- `README.md` — existed, but was still the Day 1 stub, explicitly
+  stating "Full README ... lands on Day 14." Rewritten today (not merely
+  appended) as originally planned.
+- `Makefile` — existing `data`/`initdb`/`train`/`calibrate`/`run`/`test`/
+  `clean` targets, reused as-is in the README's reproduction section, not
+  duplicated.
+- `run_pipeline.py` (repo root, Day 3) — an existing single-transaction
+  CLI. Persists to the real `recovery_guardian.db` by default and has no
+  Day 13 explanation integration, so it was left untouched rather than
+  modified into something it was never designed to be — the Day 14 demo
+  is a new, narrowly-scoped script instead (see below).
+- `src/api/app.py` — the Day 1 FastAPI skeleton, unchanged, not expanded.
+- `dashboard/` — an empty placeholder directory only; no frontend
+  implementation exists. Left empty, per the Day 14 frontend boundary.
+- No `Dockerfile`, `docker-compose.yml`, `pyproject.toml`, or Kubernetes
+  manifests exist anywhere in the repository. None were added.
+- `.env.example` — already contained only empty placeholder values and
+  an explicit `LLM_ENABLED=false` kill switch; no real credentials
+  present, none added.
+
+### 2. Judge-facing demo: `experiments/run_judge_demo.py`
+
+New, per the established `experiments/run_*.py` convention (Day 9-12).
+Calls the real, unmodified `src.pipeline.pipeline.run_pipeline()` against
+an isolated in-memory SQLite connection (the exact pattern already used
+by Day 9/11/12's test fixtures) for three fixed, deterministic scenarios:
+
+- `webhook_ambiguity` (primary safety scenario)
+- `infrastructure_high_confidence` (→ `DEFER_RETRY`)
+- `infrastructure_low_confidence` (→ `HUMAN_REVIEW`)
+
+Each scenario's transaction ID was identified offline by filtering on the
+calibrated classifier's own predicted root cause and probability — the
+same technique Day 11/13's test fixtures already used — never by
+inspecting `actual_root_cause`. The dataset's `actual_root_cause` column
+is read once per scenario, strictly after the real decision has already
+been produced, only for an optional judge-facing reference line, and is
+never passed into `PaymentEvent`, the feature builder, the classifier,
+the policy engine, or the explanation layer — verified both functionally
+(swapping the label changes nothing) and by AST inspection (the variable
+holding it is never passed into any decision-path call) in
+`tests/test_judge_demo.py`.
+
+Each scenario's `run_pipeline()` result feeds directly into
+`src.explain.service.explain_decision()` with `outcome_status=SIMULATED`
+(Day 8's simulator is the only outcome source that exists in this
+project). `action_before_explanation`/`action_after_explanation` are
+both reported explicitly in the output and asserted equal for every
+scenario.
+
+Provider selection respects the existing `.env.example` kill switch:
+unless `LLM_ENABLED=true`, the demo never attempts a Claude call at all
+(no network access, no credential lookup) and uses
+`DeterministicFallbackProvider` directly — this is also why the demo's
+default output is byte-identical across processes (see Reproducibility
+below).
+
+### 3. Reproducibility (verified, not assumed)
+
+Ran `python experiments/run_judge_demo.py` as two genuinely separate OS
+processes and diffed both the console output and the written
+`experiments/results/day14_demo.json` — **byte-identical** in both. No
+wall-clock or random-identifier field (`event_id`, `decision_id`) is
+included in the output at all, so there was nothing to exclude from the
+comparison — the same discipline Day 12 established. Day 8's simulator
+seed is derived deterministically from `(transaction_id, action)`, so the
+simulated outcome is identical across runs without any explicit seed
+needing to be threaded through the demo.
+
+`experiments/run_incident_demo.py` (Day 12) was re-run directly today and
+confirmed unchanged: 110 incident-window transactions, the same
+71.82%/11.82%/16.36% TRAIN/VALIDATION/TEST split, and
+`webhook_ambiguity_safety.safety_pass = true`.
+
+### 4. Documentation-consistency audit
+
+Searched the repository for the forbidden claim patterns ("highest
+recovery", "100% infrastructure accuracy", "real Razorpay data",
+"production recovery", "live Razorpay", "guaranteed recovery", etc.).
+Every existing match in `docs/architecture.md`/`PROGRESS.md` was already
+a negated, honest statement ("Not a live Razorpay integration...", "No
+observed recovery-outcome labels exist...") — **no correction was
+required**; the existing documentation was already consistent with the
+verified evidence. The new README was written to the same standard.
+
+### 5. Day 9/10 evidence — reported, not re-measured
+
+The README cites the exact Day 9 primary-seed-42 numbers, re-verified
+today by re-running `python experiments/run_day9_experiment.py --seed
+42` (a frozen, unmodified script) and confirming the console output
+matches exactly: Naive Retry ₹205,427.28 (29.75%, 12 duplicate-risk),
+Rules-only ₹238,230.16 (33.88%, 3 duplicate-risk), Guardian ₹193,316.24
+(28.93%, 0 duplicate-risk), No Action ₹0.00 (0.00%, 0). Guardian is
+never described as recovering the most revenue — the README states
+explicitly that Rules-only recovers more, and frames Guardian's value as
+safety-constrained recovery.
+
+### 6. Frozen firewall
+
+Verified via `git diff d778097` against `src/model`, `src/features`,
+`src/policy`, `src/recovery`, `data`, `experiments/run_day9_experiment.py`,
+`experiments/day9_experiment_config.yaml`, `src/experiment`,
+`src/ingestion/razorpay_adapter.py`, `src/explain` (the confirmed actual
+Day 13 explanation-layer path), `experiments/run_incident_demo.py`, and
+`tests/test_incident_demo.py` — all empty.
+
+### 7. Limitations
+
+- The Day 14 demo covers three fixed, hand-selected representative
+  scenarios, not an exhaustive sweep of the dataset.
+- LLM-backed (`ClaudeExplanationProvider`) demo output is not claimed
+  byte-identical — only the default deterministic-fallback path is
+  tested and documented as reproducible.
+- The README's "no frontend" position is a deliberate Day 14 scope
+  decision, not a claim that a frontend would be undesirable at a later
+  stage.
+- All Day 12/13 limitations already documented in their own sections
+  above remain unchanged and are carried forward, not re-litigated.

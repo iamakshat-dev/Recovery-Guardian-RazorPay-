@@ -736,3 +736,68 @@ webhook-signature verification anywhere in this project.
 - Day 12's 15/15 held-out INFRASTRUCTURE result remains un-investigated
   for leakage/generalization plausibility (see pre-flight check above) —
   carried forward as an open gap, not resolved by Day 13.
+
+## Day 14 — Final Productization + Judge-Facing Evidence
+
+- **Status: COMPLETE.**
+- No ML/policy/simulator/experiment/adapter/incident-methodology/
+  explanation-decision-authority change of any kind — Day 14 is a
+  productization day only.
+- New: `experiments/run_judge_demo.py` — three fixed, deterministic
+  scenarios (`webhook_ambiguity`, `infrastructure_high_confidence`,
+  `infrastructure_low_confidence`), each run through the real, unmodified
+  `run_pipeline()` against an isolated in-memory SQLite connection (no
+  writes to the real `recovery_guardian.db`), then through the real Day
+  13 `explain_decision()`. `tests/test_judge_demo.py` (26 tests).
+- README.md rewritten from the Day 1 stub into the full judge-facing
+  document it always said would land on Day 14: problem/solution,
+  the `WEBHOOK_AMBIGUITY -> BLOCK_RECONCILE` safety invariant, exact Day
+  9/10 evidence (Guardian correctly NOT described as maximizing
+  recovery), the Razorpay integration boundary, Day 12 incident replay
+  with its disclosed limitation, the Day 13 explanation layer, an
+  architecture diagram matching only components that actually exist, a
+  verified reproduction section (every command actually re-run today),
+  and 18 judge-facing questions answered from actual repository
+  behavior.
+- Documentation-consistency audit: searched for overclaiming patterns
+  ("highest recovery", "100% infrastructure accuracy", "live Razorpay",
+  "guaranteed recovery", etc.) across `docs/architecture.md`/
+  `PROGRESS.md`. Every existing match was already a negated, honest
+  statement — no correction was required.
+- Reproducibility: `experiments/run_judge_demo.py` run as two separate
+  processes, byte-identical console and JSON output (no wall-clock or
+  random-identifier fields are included at all). `run_incident_demo.py`
+  (Day 12) re-run directly and confirmed unchanged. `run_day9_experiment.py
+  --seed 42` and `run_day10_analysis.py` (both frozen, unmodified) re-run
+  directly to verify the README's cited numbers exactly, rather than
+  trusting previously-recorded values.
+- No frontend, dashboard, Docker, Kubernetes, or blockchain/Alchemy work
+  introduced — none existed before Day 14 and the master prompt
+  explicitly places all of them out of scope; a minimal dashboard remains
+  only a possible Day 15 stretch item.
+- Test count: 283 → 309 passed (26 new Day 14 tests). Day 7 (54), Day 9
+  (50), Day 10 (10), Day 11 (30), Day 12 (20), Day 13 (41) regression
+  suites all re-run and green.
+- Frozen firewall verified via `git diff d778097` against `src/model`,
+  `src/features`, `src/policy`, `src/recovery`, `data`,
+  `experiments/run_day9_experiment.py`,
+  `experiments/day9_experiment_config.yaml`, `src/experiment`,
+  `src/ingestion/razorpay_adapter.py`, `src/explain` (the confirmed
+  actual Day 13 explanation-layer path), `experiments/run_incident_demo.py`,
+  and `tests/test_incident_demo.py` — all empty.
+- Secret scan: clean (no real credentials; `.env.example` already
+  contained only empty placeholders and an explicit `LLM_ENABLED=false`
+  kill switch, unchanged).
+
+### Known limitations (Day 14)
+
+- The judge demo covers three fixed, hand-selected representative
+  scenarios, not an exhaustive sweep of the dataset.
+- LLM-backed demo output is not claimed byte-identical — only the
+  default deterministic-fallback path is tested and documented as
+  reproducible.
+- "No frontend" is a deliberate Day 14 scope decision, not a claim that
+  one would be undesirable later.
+- Every Day 9/10/12/13 limitation already on record remains unchanged
+  and is carried forward, not re-litigated — including Day 12's
+  un-investigated 15/15 held-out INFRASTRUCTURE result.
