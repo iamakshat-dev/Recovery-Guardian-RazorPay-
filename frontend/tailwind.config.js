@@ -15,7 +15,13 @@ export default {
         text: {
           primary: "#F3F5F7",
           secondary: "#9AA3AE",
-          muted: "#68717D",
+          // #68717D (the Milestone 1 spec value) fails WCAG AA contrast
+          // (3.88:1) against the darkest surface (#080A0D) at the small
+          // text sizes this token is actually used at — found by the
+          // Milestone 2 axe-core audit. Lightened to #7B8794 (5.10:1),
+          // which still reads as clearly muted relative to `secondary`
+          // and `primary`. Every other Milestone 1 color is unchanged.
+          muted: "#7B8794",
         },
         safety: {
           DEFAULT: "#22C55E",

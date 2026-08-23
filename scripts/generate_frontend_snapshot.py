@@ -16,12 +16,22 @@ recalculated) from one of:
 
     experiments/results/day9_seed_42_aggregate.json   (Day 9, frozen)
     experiments/results/day12_incident_demo.json       (Day 12, frozen)
+    experiments/results/day14_demo.json                (Day 14, frozen)
 
-Both are produced by running the existing, frozen, unmodified scripts
-(`experiments/run_day9_experiment.py --seed 42`,
-`experiments/run_incident_demo.py`) — never by this script. If either
-artifact is missing, this script fails loudly with instructions to
-generate it, rather than fabricating placeholder data.
+All three are produced by running the existing, frozen, unmodified
+scripts (`experiments/run_day9_experiment.py --seed 42`,
+`experiments/run_incident_demo.py`, `experiments/run_judge_demo.py`) —
+never by this script. If any artifact is missing, this script fails
+loudly with instructions to generate it, rather than fabricating
+placeholder data.
+
+Milestone 2 addition: the Day 14 artifact supplies the transaction-level
+scenario traces (payment event fields, predicted root cause/probability,
+policy action/reason/threshold) the interactive Decision Pipeline needs.
+`threshold_if_applicable` is copied verbatim from that artifact, which
+itself reads `src/policy/rules.yaml` via `load_policy_config()` inside
+`run_judge_demo.py` — this script never re-reads the policy YAML
+directly and never hardcodes a threshold number.
 
 Run:
     python3 scripts/generate_frontend_snapshot.py
@@ -39,6 +49,8 @@ DAY9_PATH = RESULTS_DIR / "day9_seed_42_aggregate.json"
 DAY9_SENSITIVITY_SEEDS = [43, 44]
 DAY9_SENSITIVITY_PATHS = {seed: RESULTS_DIR / f"day9_seed_{seed}_aggregate.json" for seed in DAY9_SENSITIVITY_SEEDS}
 DAY12_PATH = RESULTS_DIR / "day12_incident_demo.json"
+DAY14_PATH = RESULTS_DIR / "day14_demo.json"
+EXPECTED_DAY14_SCENARIOS = ["webhook_ambiguity", "infrastructure_high_confidence", "infrastructure_low_confidence"]
 OUTPUT_PATH = REPO_ROOT / "frontend" / "src" / "data" / "snapshot.ts"
 
 
@@ -97,9 +109,80 @@ def _webhook_ambiguity_row(by_root_cause: Dict[str, Any], strategy: str) -> Dict
     }
 
 
+def _validate_str(value: Any, field_path: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise SnapshotSourceError(f"{field_path} is not a non-empty string: {value!r}")
+    return value
+
+
+def _validate_probability(value: Any, field_path: str) -> float:
+    v = _validate_numeric(value, field_path)
+    if not (0.0 <= v <= 1.0):
+        raise SnapshotSourceError(f"{field_path} is not a valid probability (0-1): {v}")
+    return v
+
+
+def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
+    if scenario_key not in day14:
+        raise SnapshotSourceError(f"day14_demo.json missing required scenario: {scenario_key}")
+    s = day14[scenario_key]
+    p = f"{scenario_key}"
+
+    threshold = s["policy"]["threshold_if_applicable"]
+    if threshold is not None:
+        threshold = _validate_numeric(threshold, f"{p}.policy.threshold_if_applicable")
+
+    outcome = s.get("outcome") or {}
+    amount_recovered = outcome.get("amount_recovered")
+    if amount_recovered is not None:
+        amount_recovered = round(_validate_numeric(amount_recovered, f"{p}.outcome.amount_recovered"), 2)
+
+    return {
+        "scenarioLabel": _validate_str(s["scenario_label"], f"{p}.scenario_label"),
+        "transactionId": _validate_str(s["transaction_id"], f"{p}.transaction_id"),
+        "paymentEvent": {
+            "amount": round(_validate_numeric(s["payment_event_summary"]["amount"], f"{p}.payment_event_summary.amount"), 2),
+            "paymentMethod": _validate_str(s["payment_event_summary"]["payment_method"], f"{p}.payment_event_summary.payment_method"),
+            "failureCode": _validate_str(s["payment_event_summary"]["failure_code"], f"{p}.payment_event_summary.failure_code"),
+            "retryCount": _validate_int(s["payment_event_summary"]["retry_count"], f"{p}.payment_event_summary.retry_count"),
+            "webhookDelaySeconds": round(_validate_numeric(s["payment_event_summary"]["webhook_delay_seconds"], f"{p}.payment_event_summary.webhook_delay_seconds"), 2),
+            "incidentActive": bool(s["payment_event_summary"]["incident_active"]),
+        },
+        "prediction": {
+            "rootCause": _validate_str(s["prediction"]["predicted_root_cause"], f"{p}.prediction.predicted_root_cause"),
+            "probability": _validate_probability(s["prediction"]["predicted_probability"], f"{p}.prediction.predicted_probability"),
+            "modelVersion": _validate_str(s["prediction"]["model_version"], f"{p}.prediction.model_version"),
+        },
+        "policy": {
+            "action": _validate_str(s["policy"]["policy_action"], f"{p}.policy.policy_action"),
+            "reason": _validate_str(s["policy"]["policy_reason"], f"{p}.policy.policy_reason"),
+            "version": _validate_str(s["policy"]["policy_version"], f"{p}.policy.policy_version"),
+            "thresholdIfApplicable": threshold,
+        },
+        "outcome": {
+            "recovered": outcome.get("recovered"),
+            "amountRecovered": amount_recovered,
+            "duplicateChargeRisk": outcome.get("duplicate_charge_risk"),
+            "provenance": "SIMULATED",
+        },
+        "safetyInvariantCheck": {
+            "actionBeforeExplanation": _validate_str(
+                s["safety_invariant_check"]["action_before_explanation"], f"{p}.safety_invariant_check.action_before_explanation"
+            ),
+            "actionAfterExplanation": _validate_str(
+                s["safety_invariant_check"]["action_after_explanation"], f"{p}.safety_invariant_check.action_after_explanation"
+            ),
+            "unchanged": bool(s["safety_invariant_check"]["unchanged"]),
+        },
+    }
+
+
 def build_snapshot() -> Dict[str, Any]:
     day9 = _require_file(DAY9_PATH, "python experiments/run_day9_experiment.py --seed 42")
     day12 = _require_file(DAY12_PATH, "python experiments/run_incident_demo.py")
+    day14 = _require_file(DAY14_PATH, "python experiments/run_judge_demo.py")
+
+    day14_scenarios = {key: _day14_scenario(day14, key) for key in EXPECTED_DAY14_SCENARIOS}
 
     by_strategy = day9["by_strategy"]
     by_root_cause = day9["by_root_cause"]
@@ -147,6 +230,7 @@ def build_snapshot() -> Dict[str, Any]:
         "sourceArtifacts": {
             "day9": str(DAY9_PATH.relative_to(REPO_ROOT)),
             "day12": str(DAY12_PATH.relative_to(REPO_ROOT)),
+            "day14": str(DAY14_PATH.relative_to(REPO_ROOT)),
         },
         "day9": {
             "experimentSeed": _validate_int(day9["experiment_seed"], "experiment_seed"),
@@ -185,6 +269,9 @@ def build_snapshot() -> Dict[str, Any]:
                 "safetyPass": bool(safety["safety_pass"]),
             },
         },
+        "day14": {
+            "scenarios": day14_scenarios,
+        },
     }
 
 
@@ -197,6 +284,7 @@ TS_HEADER = """/**
  * Source artifacts:
  *   - experiments/results/day9_seed_42_aggregate.json  (Day 9, frozen)
  *   - experiments/results/day12_incident_demo.json      (Day 12, frozen)
+ *   - experiments/results/day14_demo.json               (Day 14, frozen)
  *
  * Every numeric value below is copied verbatim (rounded for display
  * only) from the authoritative artifacts above — nothing here is
@@ -234,7 +322,10 @@ def main() -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(render_typescript(snapshot))
     print(f"Wrote {OUTPUT_PATH}")
-    print(f"Source: {DAY9_PATH.relative_to(REPO_ROOT)}, {DAY12_PATH.relative_to(REPO_ROOT)}")
+    print(
+        f"Source: {DAY9_PATH.relative_to(REPO_ROOT)}, "
+        f"{DAY12_PATH.relative_to(REPO_ROOT)}, {DAY14_PATH.relative_to(REPO_ROOT)}"
+    )
 
 
 if __name__ == "__main__":

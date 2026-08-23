@@ -12,8 +12,8 @@ export interface NavItem {
  */
 export const NAV_ITEMS: NavItem[] = [
   { id: "overview", label: "Overview", enabled: true },
-  { id: "safety", label: "Safety", enabled: false },
-  { id: "decision-pipeline", label: "Decision Pipeline", enabled: false },
+  { id: "safety", label: "Safety", enabled: true },
+  { id: "decision-pipeline", label: "Decision Pipeline", enabled: true },
   { id: "incident-replay", label: "Incident Replay", enabled: false },
   { id: "recovery", label: "Recovery", enabled: false },
   { id: "transactions", label: "Transactions", enabled: false },

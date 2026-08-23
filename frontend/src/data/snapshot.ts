@@ -7,6 +7,7 @@
  * Source artifacts:
  *   - experiments/results/day9_seed_42_aggregate.json  (Day 9, frozen)
  *   - experiments/results/day12_incident_demo.json      (Day 12, frozen)
+ *   - experiments/results/day14_demo.json               (Day 14, frozen)
  *
  * Every numeric value below is copied verbatim (rounded for display
  * only) from the authoritative artifacts above — nothing here is
@@ -18,13 +19,14 @@
  *   python3 scripts/generate_frontend_snapshot.py
  */
 
-export const SNAPSHOT_GENERATED_AT = "2026-08-23T12:20:47.073409+00:00";
+export const SNAPSHOT_GENERATED_AT = "2026-08-23T12:43:41.025538+00:00";
 
 export const snapshot = {
-  "generatedAt": "2026-08-23T12:20:47.073409+00:00",
+  "generatedAt": "2026-08-23T12:43:41.025538+00:00",
   "sourceArtifacts": {
     "day9": "experiments/results/day9_seed_42_aggregate.json",
-    "day12": "experiments/results/day12_incident_demo.json"
+    "day12": "experiments/results/day12_incident_demo.json",
+    "day14": "experiments/results/day14_demo.json"
   },
   "day9": {
     "experimentSeed": 42,
@@ -120,6 +122,112 @@ export const snapshot = {
       "blockReconcileCount": 1,
       "deferRetryCount": 0,
       "safetyPass": true
+    }
+  },
+  "day14": {
+    "scenarios": {
+      "webhook_ambiguity": {
+        "scenarioLabel": "Primary safety scenario \u2014 WEBHOOK_AMBIGUITY",
+        "transactionId": "txn_000536_9f0ef7",
+        "paymentEvent": {
+          "amount": 3173.84,
+          "paymentMethod": "upi",
+          "failureCode": "gateway_timeout",
+          "retryCount": 0,
+          "webhookDelaySeconds": 10.38,
+          "incidentActive": false
+        },
+        "prediction": {
+          "rootCause": "WEBHOOK_AMBIGUITY",
+          "probability": 0.938427,
+          "modelVersion": "root-cause-logreg-calibrated-v1"
+        },
+        "policy": {
+          "action": "BLOCK_RECONCILE",
+          "reason": "WEBHOOK_STATE_UNKNOWN",
+          "version": "rules-v1",
+          "thresholdIfApplicable": null
+        },
+        "outcome": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false,
+          "provenance": "SIMULATED"
+        },
+        "safetyInvariantCheck": {
+          "actionBeforeExplanation": "BLOCK_RECONCILE",
+          "actionAfterExplanation": "BLOCK_RECONCILE",
+          "unchanged": true
+        }
+      },
+      "infrastructure_high_confidence": {
+        "scenarioLabel": "Secondary scenario \u2014 INFRASTRUCTURE, high confidence",
+        "transactionId": "txn_001453_f609ab",
+        "paymentEvent": {
+          "amount": 731.93,
+          "paymentMethod": "upi",
+          "failureCode": "internal_error",
+          "retryCount": 0,
+          "webhookDelaySeconds": 5.31,
+          "incidentActive": false
+        },
+        "prediction": {
+          "rootCause": "INFRASTRUCTURE",
+          "probability": 0.981901,
+          "modelVersion": "root-cause-logreg-calibrated-v1"
+        },
+        "policy": {
+          "action": "DEFER_RETRY",
+          "reason": "INFRA_CLUSTER_HIGH",
+          "version": "rules-v1",
+          "thresholdIfApplicable": 0.75
+        },
+        "outcome": {
+          "recovered": true,
+          "amountRecovered": 731.93,
+          "duplicateChargeRisk": false,
+          "provenance": "SIMULATED"
+        },
+        "safetyInvariantCheck": {
+          "actionBeforeExplanation": "DEFER_RETRY",
+          "actionAfterExplanation": "DEFER_RETRY",
+          "unchanged": true
+        }
+      },
+      "infrastructure_low_confidence": {
+        "scenarioLabel": "Secondary scenario \u2014 INFRASTRUCTURE, low confidence",
+        "transactionId": "txn_001247_939b14",
+        "paymentEvent": {
+          "amount": 2478.11,
+          "paymentMethod": "wallet",
+          "failureCode": "gateway_timeout",
+          "retryCount": 1,
+          "webhookDelaySeconds": 7.89,
+          "incidentActive": false
+        },
+        "prediction": {
+          "rootCause": "INFRASTRUCTURE",
+          "probability": 0.696458,
+          "modelVersion": "root-cause-logreg-calibrated-v1"
+        },
+        "policy": {
+          "action": "HUMAN_REVIEW",
+          "reason": "LOW_MODEL_CONFIDENCE",
+          "version": "rules-v1",
+          "thresholdIfApplicable": 0.75
+        },
+        "outcome": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false,
+          "provenance": "SIMULATED"
+        },
+        "safetyInvariantCheck": {
+          "actionBeforeExplanation": "HUMAN_REVIEW",
+          "actionAfterExplanation": "HUMAN_REVIEW",
+          "unchanged": true
+        }
+      }
     }
   }
 } as const;
