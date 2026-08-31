@@ -1856,3 +1856,30 @@ provenance/limitations.
   above remain unchanged and are carried forward, not re-litigated —
   including Day 12's un-investigated 15/15 held-out INFRASTRUCTURE
   result, disclosed on the Incident Replay page.
+
+## Day 15 Final Productization — Dataset Reproducibility Fix
+
+A pre-merge branch dry run (a genuinely fresh clone of
+`frontend/day15-productization` — the first time in this project a truly
+clean clone was tested end to end) surfaced a real reproducibility gap:
+`make data` on a fresh clone produced a `data/synthetic_events.csv` whose
+substantive fields (root cause, amount, timestamp, every feature column)
+matched the original exactly given `--seed 42`, but whose
+`transaction_id` **suffix** did not — `generate_data.py` mints that
+suffix via `uuid.uuid4()`, which `--seed` has no influence over. The
+entire Day 11-15 test/demo/frontend layer hardcodes specific full
+transaction IDs (e.g. `txn_000536_9f0ef7`, the `WEBHOOK_AMBIGUITY`
+scenario used throughout Decision Pipeline/Explainability/the judge
+demo), so a freshly-regenerated file broke 60 backend tests.
+
+`data/synthetic_events.csv` had been gitignored since Day 1 — regenerated
+locally once and reused unchanged for the entire build, but never
+actually protected by version control. **Fix**: the file is now tracked
+and committed (204KB), content byte-identical to what every prior day's
+work was already built from; `.gitignore` no longer excludes it.
+`data/generate_data.py` itself was not modified — this is a
+git-tracking-status change to an already-frozen output, not a change to
+the frozen generation code or to any generated value. `artifacts/`
+(trained/calibrated model) remains gitignored and regenerated via
+`make train`/`make calibrate`, consistent with Day 6's existing
+reproducibility verification for the training step itself.

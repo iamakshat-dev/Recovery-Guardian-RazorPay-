@@ -3,7 +3,17 @@ __pycache__/
 *.db
 .venv/
 venv/
-data/synthetic_events.csv
+
+# data/synthetic_events.csv is intentionally TRACKED, not ignored (Day
+# 15 final productization fix). `generate_data.py --seed 42` reproduces
+# every substantive field deterministically, but each transaction_id's
+# uuid4() suffix is NOT determined by --seed -- a fresh `make data` run
+# mints different suffixes every time. The entire Day 11-15 test/demo/
+# frontend layer hardcodes specific transaction_ids from one realization
+# of this file, so it must be a committed, frozen artifact rather than
+# something regenerated per clone. Discovered by the Day 15 pre-merge
+# branch dry run (a fresh clone + `make data` broke 60 tests that
+# reference specific transaction_ids). See docs/architecture.md.
 experiments/results/*.png
 experiments/results/*.json
 artifacts/

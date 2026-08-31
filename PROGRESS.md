@@ -931,3 +931,29 @@ webhook-signature verification anywhere in this project.
   install — not part of a CI pipeline.
 - Every Day 9-14 limitation already on record remains unchanged and is
   carried forward, not re-litigated.
+
+## Day 15 Final Productization — Reproducibility Fix (data/synthetic_events.csv)
+
+- **Finding**: the Day 15 pre-merge branch dry run (a genuinely fresh
+  clone, never before performed) ran `make data` per the README's own
+  reproduction instructions and broke 60 backend tests. Root cause:
+  `data/generate_data.py`'s `transaction_id` suffix uses `uuid.uuid4()`,
+  which is **not** determined by `--seed` — every field except that
+  suffix reproduces identically given seed 42, but the suffix itself is
+  fresh-random on every run. `data/synthetic_events.csv` was gitignored
+  the entire project (Day 1-14), so no fresh clone could ever reproduce
+  the exact transaction IDs the Day 11-15 test/demo/frontend layer
+  hardcodes (e.g. `txn_000536_9f0ef7`, the primary `WEBHOOK_AMBIGUITY`
+  scenario).
+- **Fix**: `data/synthetic_events.csv` is now a tracked, committed file
+  (removed from `.gitignore`) — the exact realization already in use
+  throughout Days 1-15, unchanged in content. `data/generate_data.py`
+  itself was **not modified** — the frozen generation code is untouched;
+  only the already-generated output's git-tracking status changed.
+  Verified: full backend suite (309) still passes; the dataset's content
+  is byte-identical to what every prior day's artifact/snapshot was
+  already built from.
+- This does not change any measured result, any frozen model/policy
+  behavior, or any previously-reported number — it only makes the
+  existing, unchanged dataset actually reproducible from a fresh clone,
+  as the README already claimed it was.
