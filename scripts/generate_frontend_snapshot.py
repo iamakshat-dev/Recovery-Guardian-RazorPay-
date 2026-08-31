@@ -33,6 +33,33 @@ itself reads `src/policy/rules.yaml` via `load_policy_config()` inside
 `run_judge_demo.py` — this script never re-reads the policy YAML
 directly and never hardcodes a threshold number.
 
+Milestone 3 addition (Explainability + Incident Replay): extends the
+SAME two record types M2 already reads — no second artifact and no
+second scenario/incident data model:
+  - `_day14_scenario()` now additionally copies each scenario's
+    `explanation` object (`summary`, `safety_note`, `_provenance`) from
+    the SAME per-scenario dict (`s = day14[scenario_key]`) M2 already
+    reads every other scenario field from. There is no separate
+    "explanation artifact" to identity-cross-check against — it is the
+    same record, so no transaction_id/scenario mismatch is possible.
+  - `build_snapshot()`'s `day12` section now additionally copies the
+    before/incident/after failure-density windows and the simulated
+    recovery summary from the SAME `day12` dict already loaded for the
+    class-distribution/split-membership fields.
+
+Milestone 4 addition (Recovery Analysis): reads a FOURTH artifact,
+`experiments/results/day10_analysis.json` (frozen, produced by the
+existing `experiments/run_day10_analysis.py`), for the first time. This
+is Day 10's own already-vetted, already-consolidated analysis output —
+preferred over re-deriving per-root-cause/per-seed breakdowns from the
+raw Day 9 per-transaction records, because Day 10 already normalizes
+exactly this comparison across all three seeds in one schema-consistent
+object (`seed_sensitivity`). Verified before use: `by_strategy`/
+`by_root_cause` in the three `day9_seed_{42,43,44}_aggregate.json` files
+share an identical schema, and `day10_analysis.json`'s `seed_sensitivity`
+is that same data already consolidated — so no per-seed schema
+normalization logic lives in this script; it is a straight select.
+
 Run:
     python3 scripts/generate_frontend_snapshot.py
 """
@@ -51,6 +78,9 @@ DAY9_SENSITIVITY_PATHS = {seed: RESULTS_DIR / f"day9_seed_{seed}_aggregate.json"
 DAY12_PATH = RESULTS_DIR / "day12_incident_demo.json"
 DAY14_PATH = RESULTS_DIR / "day14_demo.json"
 EXPECTED_DAY14_SCENARIOS = ["webhook_ambiguity", "infrastructure_high_confidence", "infrastructure_low_confidence"]
+DAY10_PATH = RESULTS_DIR / "day10_analysis.json"
+STRATEGIES = ["GUARDIAN", "RULES_ONLY", "NAIVE_RETRY", "NO_ACTION"]
+ROOT_CAUSES = ["CARD_DECLINE", "INFRASTRUCTURE", "INSUFFICIENT_FUNDS", "OTP_TIMEOUT", "USER_ABANDONMENT", "WEBHOOK_AMBIGUITY"]
 OUTPUT_PATH = REPO_ROOT / "frontend" / "src" / "data" / "snapshot.ts"
 
 
@@ -137,6 +167,21 @@ def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
     if amount_recovered is not None:
         amount_recovered = round(_validate_numeric(amount_recovered, f"{p}.outcome.amount_recovered"), 2)
 
+    explanation = s["explanation"]
+    # IMPORTANT, discovered during Milestone 3 raw-source verification:
+    # experiments/run_judge_demo.py writes the SAME fixed disclaimer
+    # string into explanation._provenance regardless of whether
+    # DeterministicFallbackProvider or ClaudeExplanationProvider actually
+    # produced the prose ("LLM prose (or deterministic fallback) --
+    # decision fields ... never from the provider"). The artifact does
+    # NOT record which provider actually ran for a given scenario. This
+    # script therefore does NOT guess/bucket it into "LLM-generated" vs
+    # "Deterministic" -- that would be inventing a fact the source
+    # doesn't contain. The raw disclaimer is passed through verbatim
+    # instead; see docs/architecture.md's Day 15 Milestone 3 section for
+    # the full discussion of this finding.
+    explanation_source_note = _validate_str(explanation["_provenance"], f"{p}.explanation._provenance")
+
     return {
         "scenarioLabel": _validate_str(s["scenario_label"], f"{p}.scenario_label"),
         "transactionId": _validate_str(s["transaction_id"], f"{p}.transaction_id"),
@@ -174,6 +219,83 @@ def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
             ),
             "unchanged": bool(s["safety_invariant_check"]["unchanged"]),
         },
+        "explanation": {
+            "summary": _validate_str(explanation["summary"], f"{p}.explanation.summary"),
+            "safetyNote": _validate_str(explanation["safety_note"], f"{p}.explanation.safety_note"),
+            "sourceNote": explanation_source_note,
+        },
+    }
+
+
+def _strategy_row_with_actions(table: Dict[str, Any], strategy: str, table_name: str) -> Dict[str, Any]:
+    """Shared shape for strategy_table_primary_seed / root_cause_table_primary_seed /
+    combined_card_decline_insufficient_funds_primary_seed / seed_sensitivity[seed] rows
+    -- all four share this exact schema in day10_analysis.json."""
+    if strategy not in table:
+        raise SnapshotSourceError(f"{table_name} missing strategy: {strategy}")
+    row = table[strategy]
+    action_dist = row["action_distribution"]
+    return {
+        "transactions": _validate_int(row["transactions"], f"{table_name}.{strategy}.transactions"),
+        "amountAtRisk": round(_validate_numeric(row["amount_at_risk"], f"{table_name}.{strategy}.amount_at_risk"), 2),
+        "simulatedAmountRecovered": round(
+            _validate_numeric(row["simulated_amount_recovered"], f"{table_name}.{strategy}.simulated_amount_recovered"), 2
+        ),
+        "recoveryRate": _validate_numeric(row["recovery_rate"], f"{table_name}.{strategy}.recovery_rate"),
+        "duplicateChargeRiskCount": _validate_int(
+            row["duplicate_charge_risk_count"], f"{table_name}.{strategy}.duplicate_charge_risk_count"
+        ),
+        "actionDistribution": {
+            action: _validate_int(count, f"{table_name}.{strategy}.action_distribution.{action}")
+            for action, count in action_dist.items()
+        },
+    }
+
+
+def _day10_strategy_table(day10: Dict[str, Any]) -> Dict[str, Any]:
+    table = day10["strategy_table_primary_seed"]
+    return {s: _strategy_row_with_actions(table, s, "strategy_table_primary_seed") for s in STRATEGIES}
+
+
+def _day10_root_cause_table(day10: Dict[str, Any]) -> Dict[str, Any]:
+    root_cause_table = day10["root_cause_table_primary_seed"]
+    result = {}
+    for rc in ROOT_CAUSES:
+        if rc not in root_cause_table:
+            raise SnapshotSourceError(f"root_cause_table_primary_seed missing root cause: {rc}")
+        table = root_cause_table[rc]
+        result[rc] = {s: _strategy_row_with_actions(table, s, f"root_cause_table_primary_seed.{rc}") for s in STRATEGIES}
+    return result
+
+
+def _day10_combined_card_insufficient(day10: Dict[str, Any]) -> Dict[str, Any]:
+    table = day10["combined_card_decline_insufficient_funds_primary_seed"]
+    return {s: _strategy_row_with_actions(table, s, "combined_card_decline_insufficient_funds_primary_seed") for s in STRATEGIES}
+
+
+def _day10_seed_sensitivity(day10: Dict[str, Any]) -> Dict[str, Any]:
+    primary_seed = _validate_int(day10["primary_seed"], "primary_seed")
+    sensitivity_seeds = day10["sensitivity_seeds"]
+    all_seeds = [primary_seed] + [_validate_int(s, "sensitivity_seeds") for s in sensitivity_seeds]
+
+    seed_table = day10["seed_sensitivity"]
+    result = {}
+    for seed in all_seeds:
+        seed_key = str(seed)
+        if seed_key not in seed_table:
+            raise SnapshotSourceError(f"seed_sensitivity missing seed: {seed_key}")
+        table = seed_table[seed_key]
+        result[seed_key] = {s: _strategy_row_with_actions(table, s, f"seed_sensitivity.{seed_key}") for s in STRATEGIES}
+    return result, primary_seed, [ _validate_int(s, "sensitivity_seeds") for s in sensitivity_seeds ]
+
+
+def _day10_mcnemar_guardian_vs_rules_only(day10: Dict[str, Any]) -> Dict[str, Any]:
+    row = day10["mcnemar_primary_seed"]["GUARDIAN_vs_RULES_ONLY"]
+    return {
+        "comparison": _validate_str(row["comparison"], "mcnemar.GUARDIAN_vs_RULES_ONLY.comparison"),
+        "concordantN": _validate_int(row["concordant_n"], "mcnemar.GUARDIAN_vs_RULES_ONLY.concordant_n"),
+        "discordantN": _validate_int(row["discordant_n"], "mcnemar.GUARDIAN_vs_RULES_ONLY.discordant_n"),
+        "pValue": _validate_numeric(row["p_value"], "mcnemar.GUARDIAN_vs_RULES_ONLY.p_value"),
     }
 
 
@@ -181,6 +303,13 @@ def build_snapshot() -> Dict[str, Any]:
     day9 = _require_file(DAY9_PATH, "python experiments/run_day9_experiment.py --seed 42")
     day12 = _require_file(DAY12_PATH, "python experiments/run_incident_demo.py")
     day14 = _require_file(DAY14_PATH, "python experiments/run_judge_demo.py")
+    day10 = _require_file(DAY10_PATH, "python experiments/run_day10_analysis.py")
+
+    day10_strategy_table = _day10_strategy_table(day10)
+    day10_root_cause_table = _day10_root_cause_table(day10)
+    day10_combined = _day10_combined_card_insufficient(day10)
+    day10_seed_sensitivity, day10_primary_seed, day10_sensitivity_seeds = _day10_seed_sensitivity(day10)
+    day10_mcnemar = _day10_mcnemar_guardian_vs_rules_only(day10)
 
     day14_scenarios = {key: _day14_scenario(day14, key) for key in EXPECTED_DAY14_SCENARIOS}
 
@@ -215,6 +344,18 @@ def build_snapshot() -> Dict[str, Any]:
     split = day12["split_membership"]
     classifier_summary = day12["classifier_summary"]
     safety = day12["webhook_ambiguity_safety"]
+    policy_summary = day12["policy_summary"]
+    sim_recovery = day12["simulated_recovery_summary"]
+
+    def _density_window(key: str) -> Dict[str, Any]:
+        w = incident_summary[key]
+        return {
+            "windowStart": _validate_str(w["window_start"], f"summary.{key}.window_start"),
+            "windowEnd": _validate_str(w["window_end"], f"summary.{key}.window_end"),
+            "windowMinutes": _validate_numeric(w["window_minutes"], f"summary.{key}.window_minutes"),
+            "failedEventCount": _validate_int(w["failed_event_count"], f"summary.{key}.failed_event_count"),
+            "failureDensityPerUnit": _validate_numeric(w["failure_density_per_unit"], f"summary.{key}.failure_density_per_unit"),
+        }
 
     incident_class_distribution = {
         "INFRASTRUCTURE": _validate_int(infra_summary["ground_truth_count"], "infrastructure_summary.ground_truth_count"),
@@ -231,6 +372,7 @@ def build_snapshot() -> Dict[str, Any]:
             "day9": str(DAY9_PATH.relative_to(REPO_ROOT)),
             "day12": str(DAY12_PATH.relative_to(REPO_ROOT)),
             "day14": str(DAY14_PATH.relative_to(REPO_ROOT)),
+            "day10": str(DAY10_PATH.relative_to(REPO_ROOT)),
         },
         "day9": {
             "experimentSeed": _validate_int(day9["experiment_seed"], "experiment_seed"),
@@ -247,6 +389,20 @@ def build_snapshot() -> Dict[str, Any]:
                 "start": incident_metadata["incident_window"]["start"],
                 "end": incident_metadata["incident_window"]["end"],
             },
+            "beforeWindow": {
+                "start": incident_metadata["before_window"]["start"],
+                "end": incident_metadata["before_window"]["end"],
+            },
+            "afterWindow": {
+                "start": incident_metadata["after_window"]["start"],
+                "end": incident_metadata["after_window"]["end"],
+            },
+            "metricType": _validate_str(incident_metadata["metric_type"], "metadata.metric_type"),
+            "datasetContainsSuccessfulTransactions": bool(incident_metadata["dataset_contains_successful_transactions"]),
+            "densityUnitMinutes": _validate_int(incident_summary["density_unit_minutes"], "summary.density_unit_minutes"),
+            "before": _density_window("before"),
+            "incident": _density_window("incident"),
+            "after": _density_window("after"),
             "incidentCount": _validate_int(incident_summary["incident_count"], "summary.incident_count"),
             "classDistribution": incident_class_distribution,
             "splitMembership": {
@@ -262,15 +418,41 @@ def build_snapshot() -> Dict[str, Any]:
                 "correct": _validate_int(classifier_summary["held_out_test"]["correctly_predicted_count"], "held_out_test.correctly_predicted_count"),
                 "total": _validate_int(classifier_summary["held_out_test"]["ground_truth_count"], "held_out_test.ground_truth_count"),
             },
+            "infrastructurePolicyActionDistribution": {
+                action: _validate_int(count, f"policy_summary.infrastructure_action_distribution.{action}")
+                for action, count in policy_summary["infrastructure_action_distribution"].items()
+            },
+            "infrastructureConfidenceThreshold": _validate_numeric(
+                policy_summary["infrastructure_confidence_threshold"], "policy_summary.infrastructure_confidence_threshold"
+            ),
             "webhookAmbiguitySafety": {
                 "caseCount": _validate_int(safety["case_count"], "webhook_ambiguity_safety.case_count"),
                 "blockReconcileCount": _validate_int(safety["block_reconcile_count"], "webhook_ambiguity_safety.block_reconcile_count"),
                 "deferRetryCount": _validate_int(safety["defer_retry_count"], "webhook_ambiguity_safety.defer_retry_count"),
                 "safetyPass": bool(safety["safety_pass"]),
             },
+            "simulatedRecoverySummary": {
+                "transactionsEvaluated": _validate_int(sim_recovery["transactions_evaluated"], "simulated_recovery_summary.transactions_evaluated"),
+                "recoveredCount": _validate_int(sim_recovery["simulated_recovered_count"], "simulated_recovery_summary.simulated_recovered_count"),
+                "totalAmountRecovered": round(
+                    _validate_numeric(sim_recovery["simulated_total_amount_recovered"], "simulated_recovery_summary.simulated_total_amount_recovered"), 2
+                ),
+                "duplicateChargeRiskCount": _validate_int(
+                    sim_recovery["simulated_duplicate_charge_risk_count"], "simulated_recovery_summary.simulated_duplicate_charge_risk_count"
+                ),
+            },
         },
         "day14": {
             "scenarios": day14_scenarios,
+        },
+        "day10": {
+            "primarySeed": day10_primary_seed,
+            "sensitivitySeeds": day10_sensitivity_seeds,
+            "strategyTable": day10_strategy_table,
+            "rootCauseTable": day10_root_cause_table,
+            "combinedCardDeclineInsufficientFunds": day10_combined,
+            "seedSensitivity": day10_seed_sensitivity,
+            "mcnemarGuardianVsRulesOnly": day10_mcnemar,
         },
     }
 
@@ -285,6 +467,7 @@ TS_HEADER = """/**
  *   - experiments/results/day9_seed_42_aggregate.json  (Day 9, frozen)
  *   - experiments/results/day12_incident_demo.json      (Day 12, frozen)
  *   - experiments/results/day14_demo.json               (Day 14, frozen)
+ *   - experiments/results/day10_analysis.json           (Day 10, frozen)
  *
  * Every numeric value below is copied verbatim (rounded for display
  * only) from the authoritative artifacts above — nothing here is
@@ -324,7 +507,8 @@ def main() -> None:
     print(f"Wrote {OUTPUT_PATH}")
     print(
         f"Source: {DAY9_PATH.relative_to(REPO_ROOT)}, "
-        f"{DAY12_PATH.relative_to(REPO_ROOT)}, {DAY14_PATH.relative_to(REPO_ROOT)}"
+        f"{DAY12_PATH.relative_to(REPO_ROOT)}, {DAY14_PATH.relative_to(REPO_ROOT)}, "
+        f"{DAY10_PATH.relative_to(REPO_ROOT)}"
     )
 
 

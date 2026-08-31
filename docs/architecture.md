@@ -1614,3 +1614,272 @@ Day 13 explanation-layer path), `experiments/run_incident_demo.py`, and
   stage.
 - All Day 12/13 limitations already documented in their own sections
   above remain unchanged and are carried forward, not re-litigated.
+
+## Day 15 — Frontend (Milestones 1-4)
+
+A React/TypeScript/Vite/Tailwind product shell (`frontend/`), built on
+`frontend/day15-productization` off the `submission-v1` (`7db4b02`)
+checkpoint. Five pages: Overview, Safety, Decision Pipeline,
+Explainability, Incident Replay. The frontend is a visualization layer —
+it never runs the ML model, the policy engine, or the simulator; it
+reads only already-computed evidence.
+
+### Data plumbing (Option A: build-time static snapshot)
+
+`scripts/generate_frontend_snapshot.py` is the single, read-only
+boundary between three frozen backend artifacts and the frontend:
+
+    experiments/results/day9_seed_42_aggregate.json    (+ seeds 43/44
+                                                          for cross-seed
+                                                          sensitivity)
+    experiments/results/day12_incident_demo.json
+    experiments/results/day14_demo.json
+        -> scripts/generate_frontend_snapshot.py (read-only)
+        -> frontend/src/data/snapshot.ts (typed, committed)
+        -> React UI
+
+The script only reads, validates (type/range checks per field), selects,
+and rounds-for-display — it never recomputes a metric, reruns the model
+or policy, or invents a missing value; a missing or malformed source
+field fails generation loudly (non-zero exit) rather than silently
+defaulting. Verified deterministic: two consecutive runs produce
+byte-identical output except the documented `generatedAt`/
+`SNAPSHOT_GENERATED_AT` wall-clock field (the same discipline Day 12
+established for its own run metadata).
+
+Milestone 3 extended this one script and this one output file — it did
+not create a second generator or a second scenario/incident data model.
+Both extensions merge new fields onto the exact same records Milestone 2
+already produced:
+- `_day14_scenario()`'s `explanation` field is read from the SAME
+  per-scenario dict (`day14[scenario_key]`) every other scenario field
+  already comes from — there is no second artifact to identity-cross-
+  check against, since it is structurally the same record.
+- `day12`'s new `before`/`incident`/`after` density windows and
+  `simulatedRecoverySummary` are read from the SAME already-loaded
+  `day12` dict Milestone 2's split-membership/classifier fields come
+  from.
+
+### Milestone 1 — product shell, Overview
+
+Design system: `#080A0D`/`#101318`/`#151A20`/`#252B33` surfaces,
+`#22C55E` safety green (used sparingly, via a restrained "Safety Glow"
+radial motif), system sans-serif for prose and system monospace for
+technical data (transaction IDs, probabilities, amounts, actions,
+versions) — no external font dependency. Application shell: a left
+navigation rail (collapsing to a mobile top bar), with disabled,
+clearly-marked "Soon" placeholders for unimplemented sections rather
+than fake pages. Overview: hero → primary safety KPI (0 duplicate-charge
+risk, seeds 42/43/44) → strategy comparison → `WEBHOOK_AMBIGUITY`
+signature case → static decision-pipeline preview → provenance/
+limitations footer. An axe-core audit found one real, fixed issue: the
+`text-muted` token (`#68717D`) failed WCAG AA contrast (3.88:1) against
+the darkest surface; lightened to `#7B8794` (5.10:1) — the only Milestone
+1 palette value ever changed, and only for accessibility.
+
+### Milestone 2 — Safety Hero, interactive Decision Pipeline
+
+`src/explain/`-style "one component, many contexts" discipline applied
+to the frontend: `components/pipeline/PipelineDiagram.tsx` is the single
+shared implementation of the pipeline visual (node design, connector
+lines, the ceremonial lock+glow, the quiet settle transition) — the
+Overview's static preview and the new interactive Decision Pipeline page
+both render through it; `PipelinePreview.tsx` was refactored into a thin
+wrapper rather than duplicated. Three real scenarios (verified against
+the raw Day 14 artifact before any UI was written — see the Day 15
+Milestone 2/3 final reports for the verbatim extraction):
+`WEBHOOK_AMBIGUITY → BLOCK_RECONCILE` (ceremonial), `INFRASTRUCTURE`
+high-confidence `→ DEFER_RETRY` (quiet, info accent), `INFRASTRUCTURE`
+low-confidence `→ HUMAN_REVIEW` (quiet, warning accent) — the action-to-
+accent mapping is presentational only (the same "look up how to display
+an already-known value" pattern `ProvenanceBadge` uses), never a
+computation of the action itself. Node click reveals an inline detail
+panel (not a modal), fully keyboard-accessible. A real interaction bug
+was found and fixed: clicking a node reset and replayed the entire
+reveal animation, because the node array was rebuilt (new reference) on
+every render — fixed with `useMemo`. A real responsive bug was found and
+fixed: the pipeline row overflowed horizontally at the 768px tablet
+breakpoint because flex children couldn't shrink below their text's
+intrinsic width — fixed with `min-w-0` + `break-words`.
+
+### Milestone 3 — Explainability, Incident Replay
+
+**Explainability**: decision summary → evidence chain (reusing
+`PipelineDiagram`) → explanation prose → a prominent
+`action before explanation == action after explanation` safety-invariant
+display → provenance legend. The explanation prose is rendered as
+text only — nothing on this page parses it to determine anything; every
+structured field (root cause, probability, action, reason) comes from
+the same `prediction`/`policy` records the Decision Pipeline page uses.
+
+A genuine finding during raw-source verification: `run_judge_demo.py`
+writes the identical fixed disclaimer string into
+`explanation._provenance` regardless of whether
+`DeterministicFallbackProvider` or `ClaudeExplanationProvider` actually
+produced the prose for a given scenario — the artifact does not record
+which provider ran. Rather than guessing/bucketing this into "LLM-
+generated" vs. "Deterministic" (which would have invented a fact the
+source doesn't contain), the frontend passes the raw disclaimer through
+verbatim and says so explicitly on the page.
+
+**Incident Replay**: explicitly labeled "Historical synthetic replay" in
+the header (never live monitoring or real-time telemetry) — before →
+incident → after failure-density timeline (labeled "Failure density,"
+not "failure rate," with the "why" stated inline, not in a tooltip) →
+root-cause distribution → full-window/held-out-test classifier result
+with the 15/15 limitation disclosed inline → train/validation/test
+membership with the training-majority disclosure → `WEBHOOK_AMBIGUITY`
+safety (Day 12's 1-transaction incident-window population) → simulated
+recovery (labeled SIMULATED, explicitly "never observed production
+revenue").
+
+**Day 9 vs. Day 12 `WEBHOOK_AMBIGUITY` population firewall**: the Safety
+page's Day 9 population (25 held-out test transactions) and the Incident
+Replay page's Day 12 population (1 incident-window transaction) are
+never combined into one number anywhere in the frontend. Incident Replay
+explicitly names both populations and states "the two are never
+combined"; a dedicated test
+(`IncidentReplay.test.tsx`'s "Day 9 vs Day 12 WEBHOOK_AMBIGUITY
+population firewall" describe block) asserts the rendered Day 12 count
+is exactly 1, not 25 or 26.
+
+### Testing and QA (Milestones 1-3 combined)
+
+66 frontend tests (Vitest + React Testing Library) across 10 files,
+covering: rendering, scenario switching, structured-field accuracy
+against the live snapshot, the action-before/after safety invariant,
+provenance labeling, unavailable-data states, keyboard interaction,
+no-second-decision-logic source scans, and data-continuity (M2 fields
+unchanged after M3's extension, M3 fields merged onto — not duplicating
+— M2's scenario objects). axe-core: 0 violations (of any severity) across
+all five pages, including interactive states (a node expanded, a
+non-default scenario selected) — one moderate heading-order violation
+introduced by Milestone 2's own `NodeDetailPanel` (`h3`→`h2`) was found
+and fixed during Milestone 2. Reduced motion and keyboard navigation
+verified via automated checks with a real Chrome browser (a temporary,
+non-committed `playwright-core`/`@axe-core/playwright` install, removed
+after each milestone's QA pass). Responsive QA at 1440×900/768×1024/
+390×844 for every page.
+
+### Milestone 4 — Recovery Analysis
+
+**Data-granularity audit (performed before any visualization was
+designed)**: confirmed, by direct inspection of the actual artifacts —
+not assumed —
+
+- **Per-strategy aggregate**: AVAILABLE (`day9_seed_42_aggregate.json`
+  `by_strategy`; equivalently `day10_analysis.json`
+  `strategy_table_primary_seed`, which additionally carries each
+  strategy's full `action_distribution`).
+- **Per-strategy × root-cause**: AVAILABLE (`day10_analysis.json`
+  `root_cause_table_primary_seed`, one full strategy row — including
+  `action_distribution` — per of the 6 root causes).
+- **Per-seed × strategy**: AVAILABLE, and *fully* available (not merely
+  duplicate-risk counts) — verified directly by reading all three
+  `day9_seed_{42,43,44}_aggregate.json` files independently and
+  confirming an identical schema before relying on
+  `day10_analysis.json`'s already-consolidated `seed_sensitivity`
+  object, which contains the complete 3×4 recovery/rate/risk/action
+  matrix in one schema-consistent artifact.
+
+A fourth artifact, `experiments/results/day10_analysis.json` (frozen,
+produced by the existing `experiments/run_day10_analysis.py`), was wired
+into `scripts/generate_frontend_snapshot.py` for the first time —
+preferred over re-deriving root-cause/seed breakdowns from the raw Day 9
+per-transaction records, because Day 10 already normalizes exactly this
+comparison. New snapshot section: `day10` (`strategyTable`,
+`rootCauseTable`, `combinedCardDeclineInsufficientFunds`,
+`seedSensitivity`, `mcnemarGuardianVsRulesOnly`). No second generator, no
+recomputation — pure selection of already-computed Day 10 output.
+
+**Page**: hero ("Recovery, constrained by safety.") → the same
+`SafetyKpi` component (Guardian's zero duplicate-charge risk, seeds
+42/43/44) as the primary headline, never a recovery-amount headline →
+a hand-built SVG Recovery-vs-Safety chart (one aggregate point per
+strategy — X = simulated recovery, Y = duplicate-charge risk, axis
+range derived from the data with zero always included, no truncation,
+no chart library added for four points) with a full accessible data
+table alongside it → the reused `StrategyComparison` component in
+**experiment order** (Naive Retry, Rules-only, Guardian, No Action —
+never Guardian-first) → evidence-backed interpretation (including a
+Day 10 McNemar reference, reported as measured, not as a significance
+claim) → the reused `WebhookAmbiguityCase` component, explicitly labeled
+"Day 9 test-set safety analysis — 25 transactions" → a root-cause ×
+strategy matrix → the full 3-seed × 4-strategy sensitivity table
+(genuinely available, so shown in full — not scoped down) →
+provenance/limitations.
+
+**Real bugs found and fixed during Milestone 4 QA**:
+- A landmark/ID duplication: an early draft wrapped the reused
+  `StrategyComparison` component (which already renders its own
+  `<section aria-labelledby="strategy-comparison-heading">`) in a second,
+  identically-ID'd section — axe flagged `landmark-unique`. Fixed by
+  rendering the reused component directly, matching the pattern already
+  established on the Safety page.
+- A genuine mobile-viewport horizontal-overflow bug, present since
+  Milestone 1: `SafetyKpi`'s decorative "Safety Glow" radial div (420px,
+  absolutely positioned and centered) was 30px wider than a 390px
+  mobile viewport and had no clipping ancestor, inflating
+  `document.documentElement.scrollWidth` by 15px on every page that
+  renders `SafetyKpi` (Overview, Safety, and now Recovery). Fixed with
+  one `overflow-hidden` on the component's own section — the same fix
+  `WebhookAmbiguityCase`'s equivalent glow already had.
+- A transient axe false-positive: a full-page re-audit briefly flagged a
+  `color-contrast` violation on the Explainability page's pipeline
+  final node — investigated, not dismissed: the flagged colors
+  (`#24282d`, `#404245`, `#0e3720`) were mid-CSS-transition
+  interpolated values, caught by axe running at the exact tail of the
+  500ms ceremonial reveal. Re-confirmed 0 violations with a longer
+  settle wait; not a persistent defect.
+
+### Limitations
+
+- The frontend covers exactly the three Day 14 judge-demo scenarios —
+  no arbitrary transaction search or live inference exists or is
+  planned for this product surface.
+- LLM-backed (`ClaudeExplanationProvider`) prose is not claimed
+  byte-identical; only the deterministic-fallback path and the
+  structured decision fields are tested for exact reproducibility.
+- The source artifact does not distinguish which explanation provider
+  produced a given scenario's prose — disclosed explicitly on the
+  Explainability page rather than guessed at.
+- Headless QA (axe, screenshots, keyboard/reduced-motion checks) used a
+  temporary, non-committed browser-automation install against the local
+  system Chrome — not part of a CI pipeline.
+- The Recovery Analysis seed-sensitivity table shows n=3 seeds
+  qualitatively only — no confidence interval or significance test is
+  computed or implied anywhere on that page.
+- The Day 10 McNemar comparison shown on Recovery Analysis describes
+  transaction-level paired outcomes under simulation; it is not a claim
+  of production effectiveness.
+- All Day 9-14 limitations already documented in their own sections
+  above remain unchanged and are carried forward, not re-litigated —
+  including Day 12's un-investigated 15/15 held-out INFRASTRUCTURE
+  result, disclosed on the Incident Replay page.
+
+## Day 15 Final Productization — Dataset Reproducibility Fix
+
+A pre-merge branch dry run (a genuinely fresh clone of
+`frontend/day15-productization` — the first time in this project a truly
+clean clone was tested end to end) surfaced a real reproducibility gap:
+`make data` on a fresh clone produced a `data/synthetic_events.csv` whose
+substantive fields (root cause, amount, timestamp, every feature column)
+matched the original exactly given `--seed 42`, but whose
+`transaction_id` **suffix** did not — `generate_data.py` mints that
+suffix via `uuid.uuid4()`, which `--seed` has no influence over. The
+entire Day 11-15 test/demo/frontend layer hardcodes specific full
+transaction IDs (e.g. `txn_000536_9f0ef7`, the `WEBHOOK_AMBIGUITY`
+scenario used throughout Decision Pipeline/Explainability/the judge
+demo), so a freshly-regenerated file broke 60 backend tests.
+
+`data/synthetic_events.csv` had been gitignored since Day 1 — regenerated
+locally once and reused unchanged for the entire build, but never
+actually protected by version control. **Fix**: the file is now tracked
+and committed (204KB), content byte-identical to what every prior day's
+work was already built from; `.gitignore` no longer excludes it.
+`data/generate_data.py` itself was not modified — this is a
+git-tracking-status change to an already-frozen output, not a change to
+the frozen generation code or to any generated value. `artifacts/`
+(trained/calibrated model) remains gitignored and regenerated via
+`make train`/`make calibrate`, consistent with Day 6's existing
+reproducibility verification for the training step itself.

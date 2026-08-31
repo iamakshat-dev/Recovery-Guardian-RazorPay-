@@ -25,7 +25,10 @@ export function SafetyKpi({ duplicateChargeRiskBySeed }: SafetyKpiProps) {
   }
 
   return (
-    <section aria-labelledby="safety-kpi-heading" className="relative border-b border-border px-6 py-14 md:px-10">
+    <section
+      aria-labelledby="safety-kpi-heading"
+      className="relative overflow-hidden border-b border-border px-6 py-14 md:px-10"
+    >
       {allZero ? (
         <div
           aria-hidden="true"

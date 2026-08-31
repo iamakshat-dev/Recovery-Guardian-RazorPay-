@@ -801,3 +801,172 @@ webhook-signature verification anywhere in this project.
 - Every Day 9/10/12/13 limitation already on record remains unchanged
   and is carried forward, not re-litigated — including Day 12's
   un-investigated 15/15 held-out INFRASTRUCTURE result.
+
+## Day 15 — Frontend Product Surface (Milestones 1-3)
+
+- **Status: COMPLETE (Milestones 1-3).** Branch:
+  `frontend/day15-productization`, off the `submission-v1` (`7db4b02`)
+  safety checkpoint. `main` and `submission-v1` both untouched
+  throughout.
+- Stack: React + TypeScript + Vite + Tailwind CSS + Vitest/React Testing
+  Library. No router, no chart library, no animation library, no icon
+  library, no state-management library — hand-rolled primitives
+  throughout.
+- Five pages: Overview (M1), Safety, Decision Pipeline (M2),
+  Explainability, Incident Replay (M3). Every other planned nav item
+  remains a disabled, clearly-marked "Soon" placeholder.
+- Data plumbing: `scripts/generate_frontend_snapshot.py` — the single,
+  read-only, always-extended-never-duplicated boundary between the
+  frozen `experiments/results/day{9,12,14}_*.json` artifacts and
+  `frontend/src/data/snapshot.ts` (typed, committed). Fails loudly on
+  missing/malformed/wrong-type source data; verified deterministic
+  (byte-identical across two runs except the documented `generatedAt`
+  field).
+- Shared components: `PipelineDiagram` (the pipeline visual, one
+  implementation, used by both the Overview preview and the interactive
+  Decision Pipeline/Explainability evidence chain), `ScenarioSelector`,
+  `NodeDetailPanel`, `ProvenanceBadge`.
+- Safety demonstrated end to end in the frontend: `WEBHOOK_AMBIGUITY →
+  BLOCK_RECONCILE` (ceremonial lock+glow), `INFRASTRUCTURE` high-
+  confidence `→ DEFER_RETRY` and low-confidence `→ HUMAN_REVIEW` (quiet
+  settle, distinct accent colors), all three verified against the raw
+  Day 14 artifact before any UI code was written. Explainability's
+  action-before/action-after check proves the explanation layer cannot
+  alter the decision. Incident Replay explicitly labeled "Historical
+  synthetic replay," never live monitoring; failure density (not rate)
+  used and explained inline; the Day 12 15/15 held-out INFRASTRUCTURE
+  limitation disclosed inline; the Day 9 (25 transactions) vs. Day 12 (1
+  transaction) `WEBHOOK_AMBIGUITY` populations kept explicitly separate
+  and tested as such.
+- Real bugs found and fixed during implementation: a WCAG AA contrast
+  failure on the `text-muted` token (M1, found by axe); a heading-order
+  violation from `NodeDetailPanel`'s `<h3>` (M2, found by axe); a
+  tablet-width horizontal-overflow bug in the shared pipeline component
+  (M2, found by manual responsive QA); a node-click animation-reset bug
+  caused by an unmemoized node array (M2, found by manual QA); a missing
+  literal "failure density" label caught by Incident Replay's own tests
+  (M3).
+- Test count: frontend 0 → 21 (M1) → 41 (M2) → 66 (M3). Backend
+  unchanged at 309 throughout all three milestones.
+- Accessibility: axe-core 0 violations (all severities) across every
+  page and interactive state, verified after each milestone. Keyboard
+  navigation, focus states, and `prefers-reduced-motion` verified via
+  automated real-browser checks.
+- Frozen firewall (`src/model`, `src/features`, `src/policy`,
+  `src/recovery`, `data`, `experiments`, `src/ingestion`, `src/explain`)
+  verified empty after every milestone.
+- Secret scan clean throughout; no credentials added; no live network
+  dependency in the built app.
+
+### Known limitations (Day 15)
+
+- The frontend covers exactly the three Day 14 judge-demo scenarios —
+  no arbitrary transaction search or live inference.
+- LLM-backed explanation prose is not claimed byte-identical; the source
+  artifact doesn't record which provider produced a given scenario's
+  prose, and the frontend discloses this rather than guessing.
+- Headless QA (axe, screenshots, keyboard/reduced-motion) used a
+  temporary, non-committed browser-automation install — not part of a
+  CI pipeline.
+- Milestones 5+ (Transactions, Architecture pages; any
+  Docker/Kubernetes/blockchain/live-Razorpay work) are explicitly out of
+  scope and were not started.
+- Every Day 9-14 limitation already on record remains unchanged and is
+  carried forward, not re-litigated.
+
+## Day 15 Milestone 4 — Recovery Analysis
+
+- **Status: COMPLETE.**
+- Data-granularity audit performed before any visualization was
+  designed: per-strategy aggregate AVAILABLE, per-strategy×root-cause
+  AVAILABLE, per-seed×strategy AVAILABLE (full recovery figures, not
+  just duplicate-risk counts — verified across all 3 seed artifacts
+  before use). A fourth artifact,
+  `experiments/results/day10_analysis.json`, was wired into
+  `scripts/generate_frontend_snapshot.py` (extended, not duplicated) for
+  the first time.
+- New page: Recovery Analysis (nav item "Recovery"). Hero → Guardian's
+  zero duplicate-charge-risk KPI (reused `SafetyKpi`, never a
+  recovery-amount headline) → hand-built SVG Recovery-vs-Safety chart
+  (one aggregate point per strategy, no chart library added) with a full
+  accessible data table → strategy comparison in **experiment order**
+  (Naive Retry, Rules-only, Guardian, No Action — never
+  Guardian-first) → evidence-backed interpretation → Day 9
+  `WEBHOOK_AMBIGUITY` deep dive (25 transactions, explicitly labeled
+  "Day 9 test-set safety analysis," explicitly distinguished from Day
+  12's 1-transaction incident-window population) → root-cause × strategy
+  matrix → full 3-seed × 4-strategy sensitivity table (shown in full
+  because genuinely, fully available) → provenance/limitations.
+- Content integrity: every headline number (₹205,427.28 / ₹238,230.16 /
+  ₹193,316.24 / ₹0.00; 29.75% / 33.88% / 28.93% / 0.00%; duplicate risk
+  12/3/0/0; Guardian dup-risk 0 across seeds 42/43/44; Day 9
+  `WEBHOOK_AMBIGUITY`=25 vs Day 12=1; INFRASTRUCTURE 55 txns, Guardian 43
+  DEFER_RETRY/12 HUMAN_REVIEW at the real 0.75 threshold; CARD_DECLINE +
+  INSUFFICIENT_FUNDS = 99/242 = 40.9%) re-verified against the live
+  snapshot immediately before final QA — zero discrepancies found.
+- Real bugs found and fixed: a landmark/ID-duplication axe violation
+  (redundant wrapping section around a component that already renders
+  its own); a genuine mobile horizontal-overflow bug in the shared
+  `SafetyKpi` component (present since Day 15 Milestone 1, affecting
+  Overview/Safety/Recovery alike — fixed with one `overflow-hidden`); a
+  transient axe color-contrast false-positive during a CSS transition
+  (investigated and confirmed non-persistent, not dismissed
+  unverified).
+- Test count: frontend 66 → 84 (11 test files). Backend unchanged at
+  309.
+- Accessibility: axe-core 0 violations (all severities) across all six
+  pages, re-verified after the SafetyKpi fix.
+- Frozen firewall (`src/model`, `src/features`, `src/policy`,
+  `src/recovery`, `data`, `experiments`, `src/ingestion`, `src/explain`)
+  verified empty against the Milestone 3 baseline (`d78fce0`).
+- Secret scan clean; no credentials added.
+
+### Known limitations (Day 15 Milestone 4)
+
+- Seed sensitivity (n=3) is qualitative only — no confidence interval or
+  significance test is computed or implied.
+- The Day 10 McNemar comparison shown describes transaction-level paired
+  outcomes under simulation, not production effectiveness.
+- Headless QA used a temporary, non-committed browser-automation
+  install — not part of a CI pipeline.
+- Every Day 9-14 limitation already on record remains unchanged and is
+  carried forward, not re-litigated.
+
+## Day 15 Final Productization — Reproducibility Fix (data/synthetic_events.csv)
+
+- **Finding**: the Day 15 pre-merge branch dry run (a genuinely fresh
+  clone, never before performed) ran `make data` per the README's own
+  reproduction instructions and broke 60 backend tests. Root cause:
+  `data/generate_data.py`'s `transaction_id` suffix uses `uuid.uuid4()`,
+  which is **not** determined by `--seed` — every field except that
+  suffix reproduces identically given seed 42, but the suffix itself is
+  fresh-random on every run. `data/synthetic_events.csv` was gitignored
+  the entire project (Day 1-14), so no fresh clone could ever reproduce
+  the exact transaction IDs the Day 11-15 test/demo/frontend layer
+  hardcodes (e.g. `txn_000536_9f0ef7`, the primary `WEBHOOK_AMBIGUITY`
+  scenario).
+- **Fix**: `data/synthetic_events.csv` is now a tracked, committed file
+  (removed from `.gitignore`) — the exact realization already in use
+  throughout Days 1-15, unchanged in content. `data/generate_data.py`
+  itself was **not modified** — the frozen generation code is untouched;
+  only the already-generated output's git-tracking status changed.
+  Verified: full backend suite (309) still passes; the dataset's content
+  is byte-identical to what every prior day's artifact/snapshot was
+  already built from.
+- This does not change any measured result, any frozen model/policy
+  behavior, or any previously-reported number — it only makes the
+  existing, unchanged dataset actually reproducible from a fresh clone,
+  as the README already claimed it was.
+- **Second finding, same dry run**: `tests/test_incident_demo.py::
+  test_output_artifact_file_written_by_running_the_script` asserted
+  `experiments/results/day12_incident_demo.json` already existed,
+  implicitly relying on an earlier interactive run having left it on
+  disk — invisible throughout local development (the file was always
+  already present from many prior manual runs) but failing on a
+  genuinely fresh clone/checkout, since that test runs before the one
+  other test in the same file that actually invokes the script.
+  **Fix**: the test now writes the artifact itself (mirroring
+  `main()`'s exact write logic) before asserting on it — self-contained,
+  no assertion weakened, no frozen production code touched (`tests/` is
+  not part of the frozen firewall). Verified: 309/309 backend tests pass
+  from a genuinely fresh clone after this fix.
