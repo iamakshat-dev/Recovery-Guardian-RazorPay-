@@ -8,6 +8,7 @@
  *   - experiments/results/day9_seed_42_aggregate.json  (Day 9, frozen)
  *   - experiments/results/day12_incident_demo.json      (Day 12, frozen)
  *   - experiments/results/day14_demo.json               (Day 14, frozen)
+ *   - experiments/results/day10_analysis.json           (Day 10, frozen)
  *
  * Every numeric value below is copied verbatim (rounded for display
  * only) from the authoritative artifacts above — nothing here is
@@ -19,14 +20,15 @@
  *   python3 scripts/generate_frontend_snapshot.py
  */
 
-export const SNAPSHOT_GENERATED_AT = "2026-08-23T13:51:14.984513+00:00";
+export const SNAPSHOT_GENERATED_AT = "2026-08-31T20:09:30.045616+00:00";
 
 export const snapshot = {
-  "generatedAt": "2026-08-23T13:51:14.984513+00:00",
+  "generatedAt": "2026-08-31T20:09:30.045616+00:00",
   "sourceArtifacts": {
     "day9": "experiments/results/day9_seed_42_aggregate.json",
     "day12": "experiments/results/day12_incident_demo.json",
-    "day14": "experiments/results/day14_demo.json"
+    "day14": "experiments/results/day14_demo.json",
+    "day10": "experiments/results/day10_analysis.json"
   },
   "day9": {
     "experimentSeed": 42,
@@ -286,6 +288,661 @@ export const snapshot = {
           "sourceNote": "LLM prose (or deterministic fallback) \u2014 decision fields below are re-derived from evidence, never from the provider"
         }
       }
+    }
+  },
+  "day10": {
+    "primarySeed": 42,
+    "sensitivitySeeds": [
+      43,
+      44
+    ],
+    "strategyTable": {
+      "GUARDIAN": {
+        "transactions": 242,
+        "amountAtRisk": 677213.78,
+        "simulatedAmountRecovered": 193316.24,
+        "recoveryRate": 0.2892561983471074,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 25,
+          "CUSTOMER_RECOVERY": 98,
+          "DEFER_RETRY": 43,
+          "HUMAN_REVIEW": 13,
+          "NO_ACTION": 63
+        }
+      },
+      "RULES_ONLY": {
+        "transactions": 242,
+        "amountAtRisk": 677213.78,
+        "simulatedAmountRecovered": 238230.16,
+        "recoveryRate": 0.33884297520661155,
+        "duplicateChargeRiskCount": 3,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 99,
+          "DEFER_RETRY": 64,
+          "HUMAN_REVIEW": 79,
+          "NO_ACTION": 0
+        }
+      },
+      "NAIVE_RETRY": {
+        "transactions": 242,
+        "amountAtRisk": 677213.78,
+        "simulatedAmountRecovered": 205427.28,
+        "recoveryRate": 0.2975206611570248,
+        "duplicateChargeRiskCount": 12,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 0,
+          "DEFER_RETRY": 242,
+          "HUMAN_REVIEW": 0,
+          "NO_ACTION": 0
+        }
+      },
+      "NO_ACTION": {
+        "transactions": 242,
+        "amountAtRisk": 677213.78,
+        "simulatedAmountRecovered": 0.0,
+        "recoveryRate": 0.0,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 0,
+          "DEFER_RETRY": 0,
+          "HUMAN_REVIEW": 0,
+          "NO_ACTION": 242
+        }
+      }
+    },
+    "rootCauseTable": {
+      "CARD_DECLINE": {
+        "GUARDIAN": {
+          "transactions": 52,
+          "amountAtRisk": 196131.84,
+          "simulatedAmountRecovered": 86924.28,
+          "recoveryRate": 0.4807692307692308,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 51,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 1,
+            "NO_ACTION": 0
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 52,
+          "amountAtRisk": 196131.84,
+          "simulatedAmountRecovered": 86924.28,
+          "recoveryRate": 0.4807692307692308,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 52,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 52,
+          "amountAtRisk": 196131.84,
+          "simulatedAmountRecovered": 3683.42,
+          "recoveryRate": 0.09615384615384616,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 52,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 52,
+          "amountAtRisk": 196131.84,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 52
+          }
+        }
+      },
+      "INFRASTRUCTURE": {
+        "GUARDIAN": {
+          "transactions": 55,
+          "amountAtRisk": 143862.56,
+          "simulatedAmountRecovered": 61915.86,
+          "recoveryRate": 0.4909090909090909,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 43,
+            "HUMAN_REVIEW": 12,
+            "NO_ACTION": 0
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 55,
+          "amountAtRisk": 143862.56,
+          "simulatedAmountRecovered": 89184.69,
+          "recoveryRate": 0.6181818181818182,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 55,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 55,
+          "amountAtRisk": 143862.56,
+          "simulatedAmountRecovered": 89184.69,
+          "recoveryRate": 0.6181818181818182,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 55,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 55,
+          "amountAtRisk": 143862.56,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 55
+          }
+        }
+      },
+      "INSUFFICIENT_FUNDS": {
+        "GUARDIAN": {
+          "transactions": 47,
+          "amountAtRisk": 96276.53,
+          "simulatedAmountRecovered": 44476.1,
+          "recoveryRate": 0.3829787234042553,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 47,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 47,
+          "amountAtRisk": 96276.53,
+          "simulatedAmountRecovered": 44476.1,
+          "recoveryRate": 0.3829787234042553,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 47,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 47,
+          "amountAtRisk": 96276.53,
+          "simulatedAmountRecovered": 8995.44,
+          "recoveryRate": 0.0851063829787234,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 47,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 47,
+          "amountAtRisk": 96276.53,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 47
+          }
+        }
+      },
+      "OTP_TIMEOUT": {
+        "GUARDIAN": {
+          "transactions": 31,
+          "amountAtRisk": 76940.59,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 31
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 31,
+          "amountAtRisk": 76940.59,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 31,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 31,
+          "amountAtRisk": 76940.59,
+          "simulatedAmountRecovered": 20739.59,
+          "recoveryRate": 0.16129032258064516,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 31,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 31,
+          "amountAtRisk": 76940.59,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 31
+          }
+        }
+      },
+      "USER_ABANDONMENT": {
+        "GUARDIAN": {
+          "transactions": 32,
+          "amountAtRisk": 100286.06,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 32
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 32,
+          "amountAtRisk": 100286.06,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 32,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 32,
+          "amountAtRisk": 100286.06,
+          "simulatedAmountRecovered": 36948.34,
+          "recoveryRate": 0.21875,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 32,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 32,
+          "amountAtRisk": 100286.06,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 32
+          }
+        }
+      },
+      "WEBHOOK_AMBIGUITY": {
+        "GUARDIAN": {
+          "transactions": 25,
+          "amountAtRisk": 63716.2,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 25,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 25,
+          "amountAtRisk": 63716.2,
+          "simulatedAmountRecovered": 17645.09,
+          "recoveryRate": 0.2,
+          "duplicateChargeRiskCount": 3,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 9,
+            "HUMAN_REVIEW": 16,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 25,
+          "amountAtRisk": 63716.2,
+          "simulatedAmountRecovered": 45875.8,
+          "recoveryRate": 0.68,
+          "duplicateChargeRiskCount": 12,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 25,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 25,
+          "amountAtRisk": 63716.2,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 25
+          }
+        }
+      }
+    },
+    "combinedCardDeclineInsufficientFunds": {
+      "GUARDIAN": {
+        "transactions": 99,
+        "amountAtRisk": 292408.37,
+        "simulatedAmountRecovered": 131400.38,
+        "recoveryRate": 0.43434343434343436,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 98,
+          "DEFER_RETRY": 0,
+          "HUMAN_REVIEW": 1,
+          "NO_ACTION": 0
+        }
+      },
+      "RULES_ONLY": {
+        "transactions": 99,
+        "amountAtRisk": 292408.37,
+        "simulatedAmountRecovered": 131400.38,
+        "recoveryRate": 0.43434343434343436,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 99,
+          "DEFER_RETRY": 0,
+          "HUMAN_REVIEW": 0,
+          "NO_ACTION": 0
+        }
+      },
+      "NAIVE_RETRY": {
+        "transactions": 99,
+        "amountAtRisk": 292408.37,
+        "simulatedAmountRecovered": 12678.86,
+        "recoveryRate": 0.09090909090909091,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 0,
+          "DEFER_RETRY": 99,
+          "HUMAN_REVIEW": 0,
+          "NO_ACTION": 0
+        }
+      },
+      "NO_ACTION": {
+        "transactions": 99,
+        "amountAtRisk": 292408.37,
+        "simulatedAmountRecovered": 0.0,
+        "recoveryRate": 0.0,
+        "duplicateChargeRiskCount": 0,
+        "actionDistribution": {
+          "BLOCK_RECONCILE": 0,
+          "CUSTOMER_RECOVERY": 0,
+          "DEFER_RETRY": 0,
+          "HUMAN_REVIEW": 0,
+          "NO_ACTION": 99
+        }
+      }
+    },
+    "seedSensitivity": {
+      "42": {
+        "GUARDIAN": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 193316.24,
+          "recoveryRate": 0.2892561983471074,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 25,
+            "CUSTOMER_RECOVERY": 98,
+            "DEFER_RETRY": 43,
+            "HUMAN_REVIEW": 13,
+            "NO_ACTION": 63
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 238230.16,
+          "recoveryRate": 0.33884297520661155,
+          "duplicateChargeRiskCount": 3,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 99,
+            "DEFER_RETRY": 64,
+            "HUMAN_REVIEW": 79,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 205427.28,
+          "recoveryRate": 0.2975206611570248,
+          "duplicateChargeRiskCount": 12,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 242,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 242
+          }
+        }
+      },
+      "43": {
+        "GUARDIAN": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 151387.84,
+          "recoveryRate": 0.2768595041322314,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 25,
+            "CUSTOMER_RECOVERY": 98,
+            "DEFER_RETRY": 43,
+            "HUMAN_REVIEW": 13,
+            "NO_ACTION": 63
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 175672.81,
+          "recoveryRate": 0.3305785123966942,
+          "duplicateChargeRiskCount": 1,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 99,
+            "DEFER_RETRY": 64,
+            "HUMAN_REVIEW": 79,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 168554.05,
+          "recoveryRate": 0.3181818181818182,
+          "duplicateChargeRiskCount": 5,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 242,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 242
+          }
+        }
+      },
+      "44": {
+        "GUARDIAN": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 186728.41,
+          "recoveryRate": 0.29338842975206614,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 25,
+            "CUSTOMER_RECOVERY": 98,
+            "DEFER_RETRY": 43,
+            "HUMAN_REVIEW": 13,
+            "NO_ACTION": 63
+          }
+        },
+        "RULES_ONLY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 239307.76,
+          "recoveryRate": 0.36363636363636365,
+          "duplicateChargeRiskCount": 2,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 99,
+            "DEFER_RETRY": 64,
+            "HUMAN_REVIEW": 79,
+            "NO_ACTION": 0
+          }
+        },
+        "NAIVE_RETRY": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 173330.03,
+          "recoveryRate": 0.30165289256198347,
+          "duplicateChargeRiskCount": 10,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 242,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 0
+          }
+        },
+        "NO_ACTION": {
+          "transactions": 242,
+          "amountAtRisk": 677213.78,
+          "simulatedAmountRecovered": 0.0,
+          "recoveryRate": 0.0,
+          "duplicateChargeRiskCount": 0,
+          "actionDistribution": {
+            "BLOCK_RECONCILE": 0,
+            "CUSTOMER_RECOVERY": 0,
+            "DEFER_RETRY": 0,
+            "HUMAN_REVIEW": 0,
+            "NO_ACTION": 242
+          }
+        }
+      }
+    },
+    "mcnemarGuardianVsRulesOnly": {
+      "comparison": "GUARDIAN vs RULES_ONLY",
+      "concordantN": 230,
+      "discordantN": 12,
+      "pValue": 0.00048828125
     }
   }
 } as const;

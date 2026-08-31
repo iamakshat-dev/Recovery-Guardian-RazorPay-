@@ -47,6 +47,19 @@ second scenario/incident data model:
     recovery summary from the SAME `day12` dict already loaded for the
     class-distribution/split-membership fields.
 
+Milestone 4 addition (Recovery Analysis): reads a FOURTH artifact,
+`experiments/results/day10_analysis.json` (frozen, produced by the
+existing `experiments/run_day10_analysis.py`), for the first time. This
+is Day 10's own already-vetted, already-consolidated analysis output —
+preferred over re-deriving per-root-cause/per-seed breakdowns from the
+raw Day 9 per-transaction records, because Day 10 already normalizes
+exactly this comparison across all three seeds in one schema-consistent
+object (`seed_sensitivity`). Verified before use: `by_strategy`/
+`by_root_cause` in the three `day9_seed_{42,43,44}_aggregate.json` files
+share an identical schema, and `day10_analysis.json`'s `seed_sensitivity`
+is that same data already consolidated — so no per-seed schema
+normalization logic lives in this script; it is a straight select.
+
 Run:
     python3 scripts/generate_frontend_snapshot.py
 """
@@ -65,6 +78,9 @@ DAY9_SENSITIVITY_PATHS = {seed: RESULTS_DIR / f"day9_seed_{seed}_aggregate.json"
 DAY12_PATH = RESULTS_DIR / "day12_incident_demo.json"
 DAY14_PATH = RESULTS_DIR / "day14_demo.json"
 EXPECTED_DAY14_SCENARIOS = ["webhook_ambiguity", "infrastructure_high_confidence", "infrastructure_low_confidence"]
+DAY10_PATH = RESULTS_DIR / "day10_analysis.json"
+STRATEGIES = ["GUARDIAN", "RULES_ONLY", "NAIVE_RETRY", "NO_ACTION"]
+ROOT_CAUSES = ["CARD_DECLINE", "INFRASTRUCTURE", "INSUFFICIENT_FUNDS", "OTP_TIMEOUT", "USER_ABANDONMENT", "WEBHOOK_AMBIGUITY"]
 OUTPUT_PATH = REPO_ROOT / "frontend" / "src" / "data" / "snapshot.ts"
 
 
@@ -211,10 +227,89 @@ def _day14_scenario(day14: Dict[str, Any], scenario_key: str) -> Dict[str, Any]:
     }
 
 
+def _strategy_row_with_actions(table: Dict[str, Any], strategy: str, table_name: str) -> Dict[str, Any]:
+    """Shared shape for strategy_table_primary_seed / root_cause_table_primary_seed /
+    combined_card_decline_insufficient_funds_primary_seed / seed_sensitivity[seed] rows
+    -- all four share this exact schema in day10_analysis.json."""
+    if strategy not in table:
+        raise SnapshotSourceError(f"{table_name} missing strategy: {strategy}")
+    row = table[strategy]
+    action_dist = row["action_distribution"]
+    return {
+        "transactions": _validate_int(row["transactions"], f"{table_name}.{strategy}.transactions"),
+        "amountAtRisk": round(_validate_numeric(row["amount_at_risk"], f"{table_name}.{strategy}.amount_at_risk"), 2),
+        "simulatedAmountRecovered": round(
+            _validate_numeric(row["simulated_amount_recovered"], f"{table_name}.{strategy}.simulated_amount_recovered"), 2
+        ),
+        "recoveryRate": _validate_numeric(row["recovery_rate"], f"{table_name}.{strategy}.recovery_rate"),
+        "duplicateChargeRiskCount": _validate_int(
+            row["duplicate_charge_risk_count"], f"{table_name}.{strategy}.duplicate_charge_risk_count"
+        ),
+        "actionDistribution": {
+            action: _validate_int(count, f"{table_name}.{strategy}.action_distribution.{action}")
+            for action, count in action_dist.items()
+        },
+    }
+
+
+def _day10_strategy_table(day10: Dict[str, Any]) -> Dict[str, Any]:
+    table = day10["strategy_table_primary_seed"]
+    return {s: _strategy_row_with_actions(table, s, "strategy_table_primary_seed") for s in STRATEGIES}
+
+
+def _day10_root_cause_table(day10: Dict[str, Any]) -> Dict[str, Any]:
+    root_cause_table = day10["root_cause_table_primary_seed"]
+    result = {}
+    for rc in ROOT_CAUSES:
+        if rc not in root_cause_table:
+            raise SnapshotSourceError(f"root_cause_table_primary_seed missing root cause: {rc}")
+        table = root_cause_table[rc]
+        result[rc] = {s: _strategy_row_with_actions(table, s, f"root_cause_table_primary_seed.{rc}") for s in STRATEGIES}
+    return result
+
+
+def _day10_combined_card_insufficient(day10: Dict[str, Any]) -> Dict[str, Any]:
+    table = day10["combined_card_decline_insufficient_funds_primary_seed"]
+    return {s: _strategy_row_with_actions(table, s, "combined_card_decline_insufficient_funds_primary_seed") for s in STRATEGIES}
+
+
+def _day10_seed_sensitivity(day10: Dict[str, Any]) -> Dict[str, Any]:
+    primary_seed = _validate_int(day10["primary_seed"], "primary_seed")
+    sensitivity_seeds = day10["sensitivity_seeds"]
+    all_seeds = [primary_seed] + [_validate_int(s, "sensitivity_seeds") for s in sensitivity_seeds]
+
+    seed_table = day10["seed_sensitivity"]
+    result = {}
+    for seed in all_seeds:
+        seed_key = str(seed)
+        if seed_key not in seed_table:
+            raise SnapshotSourceError(f"seed_sensitivity missing seed: {seed_key}")
+        table = seed_table[seed_key]
+        result[seed_key] = {s: _strategy_row_with_actions(table, s, f"seed_sensitivity.{seed_key}") for s in STRATEGIES}
+    return result, primary_seed, [ _validate_int(s, "sensitivity_seeds") for s in sensitivity_seeds ]
+
+
+def _day10_mcnemar_guardian_vs_rules_only(day10: Dict[str, Any]) -> Dict[str, Any]:
+    row = day10["mcnemar_primary_seed"]["GUARDIAN_vs_RULES_ONLY"]
+    return {
+        "comparison": _validate_str(row["comparison"], "mcnemar.GUARDIAN_vs_RULES_ONLY.comparison"),
+        "concordantN": _validate_int(row["concordant_n"], "mcnemar.GUARDIAN_vs_RULES_ONLY.concordant_n"),
+        "discordantN": _validate_int(row["discordant_n"], "mcnemar.GUARDIAN_vs_RULES_ONLY.discordant_n"),
+        "pValue": _validate_numeric(row["p_value"], "mcnemar.GUARDIAN_vs_RULES_ONLY.p_value"),
+    }
+
+
 def build_snapshot() -> Dict[str, Any]:
     day9 = _require_file(DAY9_PATH, "python experiments/run_day9_experiment.py --seed 42")
     day12 = _require_file(DAY12_PATH, "python experiments/run_incident_demo.py")
     day14 = _require_file(DAY14_PATH, "python experiments/run_judge_demo.py")
+    day10 = _require_file(DAY10_PATH, "python experiments/run_day10_analysis.py")
+
+    day10_strategy_table = _day10_strategy_table(day10)
+    day10_root_cause_table = _day10_root_cause_table(day10)
+    day10_combined = _day10_combined_card_insufficient(day10)
+    day10_seed_sensitivity, day10_primary_seed, day10_sensitivity_seeds = _day10_seed_sensitivity(day10)
+    day10_mcnemar = _day10_mcnemar_guardian_vs_rules_only(day10)
 
     day14_scenarios = {key: _day14_scenario(day14, key) for key in EXPECTED_DAY14_SCENARIOS}
 
@@ -277,6 +372,7 @@ def build_snapshot() -> Dict[str, Any]:
             "day9": str(DAY9_PATH.relative_to(REPO_ROOT)),
             "day12": str(DAY12_PATH.relative_to(REPO_ROOT)),
             "day14": str(DAY14_PATH.relative_to(REPO_ROOT)),
+            "day10": str(DAY10_PATH.relative_to(REPO_ROOT)),
         },
         "day9": {
             "experimentSeed": _validate_int(day9["experiment_seed"], "experiment_seed"),
@@ -349,6 +445,15 @@ def build_snapshot() -> Dict[str, Any]:
         "day14": {
             "scenarios": day14_scenarios,
         },
+        "day10": {
+            "primarySeed": day10_primary_seed,
+            "sensitivitySeeds": day10_sensitivity_seeds,
+            "strategyTable": day10_strategy_table,
+            "rootCauseTable": day10_root_cause_table,
+            "combinedCardDeclineInsufficientFunds": day10_combined,
+            "seedSensitivity": day10_seed_sensitivity,
+            "mcnemarGuardianVsRulesOnly": day10_mcnemar,
+        },
     }
 
 
@@ -362,6 +467,7 @@ TS_HEADER = """/**
  *   - experiments/results/day9_seed_42_aggregate.json  (Day 9, frozen)
  *   - experiments/results/day12_incident_demo.json      (Day 12, frozen)
  *   - experiments/results/day14_demo.json               (Day 14, frozen)
+ *   - experiments/results/day10_analysis.json           (Day 10, frozen)
  *
  * Every numeric value below is copied verbatim (rounded for display
  * only) from the authoritative artifacts above — nothing here is
@@ -401,7 +507,8 @@ def main() -> None:
     print(f"Wrote {OUTPUT_PATH}")
     print(
         f"Source: {DAY9_PATH.relative_to(REPO_ROOT)}, "
-        f"{DAY12_PATH.relative_to(REPO_ROOT)}, {DAY14_PATH.relative_to(REPO_ROOT)}"
+        f"{DAY12_PATH.relative_to(REPO_ROOT)}, {DAY14_PATH.relative_to(REPO_ROOT)}, "
+        f"{DAY10_PATH.relative_to(REPO_ROOT)}"
     )
 
 

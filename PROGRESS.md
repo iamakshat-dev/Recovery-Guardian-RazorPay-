@@ -868,8 +868,66 @@ webhook-signature verification anywhere in this project.
 - Headless QA (axe, screenshots, keyboard/reduced-motion) used a
   temporary, non-committed browser-automation install — not part of a
   CI pipeline.
-- Milestones 4+ (Recovery, Transactions, Architecture pages; any
+- Milestones 5+ (Transactions, Architecture pages; any
   Docker/Kubernetes/blockchain/live-Razorpay work) are explicitly out of
   scope and were not started.
+- Every Day 9-14 limitation already on record remains unchanged and is
+  carried forward, not re-litigated.
+
+## Day 15 Milestone 4 — Recovery Analysis
+
+- **Status: COMPLETE.**
+- Data-granularity audit performed before any visualization was
+  designed: per-strategy aggregate AVAILABLE, per-strategy×root-cause
+  AVAILABLE, per-seed×strategy AVAILABLE (full recovery figures, not
+  just duplicate-risk counts — verified across all 3 seed artifacts
+  before use). A fourth artifact,
+  `experiments/results/day10_analysis.json`, was wired into
+  `scripts/generate_frontend_snapshot.py` (extended, not duplicated) for
+  the first time.
+- New page: Recovery Analysis (nav item "Recovery"). Hero → Guardian's
+  zero duplicate-charge-risk KPI (reused `SafetyKpi`, never a
+  recovery-amount headline) → hand-built SVG Recovery-vs-Safety chart
+  (one aggregate point per strategy, no chart library added) with a full
+  accessible data table → strategy comparison in **experiment order**
+  (Naive Retry, Rules-only, Guardian, No Action — never
+  Guardian-first) → evidence-backed interpretation → Day 9
+  `WEBHOOK_AMBIGUITY` deep dive (25 transactions, explicitly labeled
+  "Day 9 test-set safety analysis," explicitly distinguished from Day
+  12's 1-transaction incident-window population) → root-cause × strategy
+  matrix → full 3-seed × 4-strategy sensitivity table (shown in full
+  because genuinely, fully available) → provenance/limitations.
+- Content integrity: every headline number (₹205,427.28 / ₹238,230.16 /
+  ₹193,316.24 / ₹0.00; 29.75% / 33.88% / 28.93% / 0.00%; duplicate risk
+  12/3/0/0; Guardian dup-risk 0 across seeds 42/43/44; Day 9
+  `WEBHOOK_AMBIGUITY`=25 vs Day 12=1; INFRASTRUCTURE 55 txns, Guardian 43
+  DEFER_RETRY/12 HUMAN_REVIEW at the real 0.75 threshold; CARD_DECLINE +
+  INSUFFICIENT_FUNDS = 99/242 = 40.9%) re-verified against the live
+  snapshot immediately before final QA — zero discrepancies found.
+- Real bugs found and fixed: a landmark/ID-duplication axe violation
+  (redundant wrapping section around a component that already renders
+  its own); a genuine mobile horizontal-overflow bug in the shared
+  `SafetyKpi` component (present since Day 15 Milestone 1, affecting
+  Overview/Safety/Recovery alike — fixed with one `overflow-hidden`); a
+  transient axe color-contrast false-positive during a CSS transition
+  (investigated and confirmed non-persistent, not dismissed
+  unverified).
+- Test count: frontend 66 → 84 (11 test files). Backend unchanged at
+  309.
+- Accessibility: axe-core 0 violations (all severities) across all six
+  pages, re-verified after the SafetyKpi fix.
+- Frozen firewall (`src/model`, `src/features`, `src/policy`,
+  `src/recovery`, `data`, `experiments`, `src/ingestion`, `src/explain`)
+  verified empty against the Milestone 3 baseline (`d78fce0`).
+- Secret scan clean; no credentials added.
+
+### Known limitations (Day 15 Milestone 4)
+
+- Seed sensitivity (n=3) is qualitative only — no confidence interval or
+  significance test is computed or implied.
+- The Day 10 McNemar comparison shown describes transaction-level paired
+  outcomes under simulation, not production effectiveness.
+- Headless QA used a temporary, non-committed browser-automation
+  install — not part of a CI pipeline.
 - Every Day 9-14 limitation already on record remains unchanged and is
   carried forward, not re-litigated.

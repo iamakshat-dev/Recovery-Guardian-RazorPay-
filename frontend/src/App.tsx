@@ -6,6 +6,7 @@ import { DecisionPipeline } from "./pages/DecisionPipeline";
 import { Explainability } from "./pages/Explainability";
 import { IncidentReplay } from "./pages/IncidentReplay";
 import { Overview } from "./pages/Overview";
+import { RecoveryAnalysis } from "./pages/RecoveryAnalysis";
 import { SafetyHero } from "./pages/SafetyHero";
 
 function App() {
@@ -24,6 +25,8 @@ function App() {
     content = <Explainability />;
   } else if (activeSection === "incident-replay") {
     content = <IncidentReplay />;
+  } else if (activeSection === "recovery") {
+    content = <RecoveryAnalysis />;
   } else {
     content = <ComingSoon label={activeItem?.label ?? "Section"} />;
   }

@@ -1615,7 +1615,7 @@ Day 13 explanation-layer path), `experiments/run_incident_demo.py`, and
 - All Day 12/13 limitations already documented in their own sections
   above remain unchanged and are carried forward, not re-litigated.
 
-## Day 15 — Frontend (Milestones 1-3)
+## Day 15 — Frontend (Milestones 1-4)
 
 A React/TypeScript/Vite/Tailwind product shell (`frontend/`), built on
 `frontend/day15-productization` off the `submission-v1` (`7db4b02`)
@@ -1761,6 +1761,77 @@ non-committed `playwright-core`/`@axe-core/playwright` install, removed
 after each milestone's QA pass). Responsive QA at 1440×900/768×1024/
 390×844 for every page.
 
+### Milestone 4 — Recovery Analysis
+
+**Data-granularity audit (performed before any visualization was
+designed)**: confirmed, by direct inspection of the actual artifacts —
+not assumed —
+
+- **Per-strategy aggregate**: AVAILABLE (`day9_seed_42_aggregate.json`
+  `by_strategy`; equivalently `day10_analysis.json`
+  `strategy_table_primary_seed`, which additionally carries each
+  strategy's full `action_distribution`).
+- **Per-strategy × root-cause**: AVAILABLE (`day10_analysis.json`
+  `root_cause_table_primary_seed`, one full strategy row — including
+  `action_distribution` — per of the 6 root causes).
+- **Per-seed × strategy**: AVAILABLE, and *fully* available (not merely
+  duplicate-risk counts) — verified directly by reading all three
+  `day9_seed_{42,43,44}_aggregate.json` files independently and
+  confirming an identical schema before relying on
+  `day10_analysis.json`'s already-consolidated `seed_sensitivity`
+  object, which contains the complete 3×4 recovery/rate/risk/action
+  matrix in one schema-consistent artifact.
+
+A fourth artifact, `experiments/results/day10_analysis.json` (frozen,
+produced by the existing `experiments/run_day10_analysis.py`), was wired
+into `scripts/generate_frontend_snapshot.py` for the first time —
+preferred over re-deriving root-cause/seed breakdowns from the raw Day 9
+per-transaction records, because Day 10 already normalizes exactly this
+comparison. New snapshot section: `day10` (`strategyTable`,
+`rootCauseTable`, `combinedCardDeclineInsufficientFunds`,
+`seedSensitivity`, `mcnemarGuardianVsRulesOnly`). No second generator, no
+recomputation — pure selection of already-computed Day 10 output.
+
+**Page**: hero ("Recovery, constrained by safety.") → the same
+`SafetyKpi` component (Guardian's zero duplicate-charge risk, seeds
+42/43/44) as the primary headline, never a recovery-amount headline →
+a hand-built SVG Recovery-vs-Safety chart (one aggregate point per
+strategy — X = simulated recovery, Y = duplicate-charge risk, axis
+range derived from the data with zero always included, no truncation,
+no chart library added for four points) with a full accessible data
+table alongside it → the reused `StrategyComparison` component in
+**experiment order** (Naive Retry, Rules-only, Guardian, No Action —
+never Guardian-first) → evidence-backed interpretation (including a
+Day 10 McNemar reference, reported as measured, not as a significance
+claim) → the reused `WebhookAmbiguityCase` component, explicitly labeled
+"Day 9 test-set safety analysis — 25 transactions" → a root-cause ×
+strategy matrix → the full 3-seed × 4-strategy sensitivity table
+(genuinely available, so shown in full — not scoped down) →
+provenance/limitations.
+
+**Real bugs found and fixed during Milestone 4 QA**:
+- A landmark/ID duplication: an early draft wrapped the reused
+  `StrategyComparison` component (which already renders its own
+  `<section aria-labelledby="strategy-comparison-heading">`) in a second,
+  identically-ID'd section — axe flagged `landmark-unique`. Fixed by
+  rendering the reused component directly, matching the pattern already
+  established on the Safety page.
+- A genuine mobile-viewport horizontal-overflow bug, present since
+  Milestone 1: `SafetyKpi`'s decorative "Safety Glow" radial div (420px,
+  absolutely positioned and centered) was 30px wider than a 390px
+  mobile viewport and had no clipping ancestor, inflating
+  `document.documentElement.scrollWidth` by 15px on every page that
+  renders `SafetyKpi` (Overview, Safety, and now Recovery). Fixed with
+  one `overflow-hidden` on the component's own section — the same fix
+  `WebhookAmbiguityCase`'s equivalent glow already had.
+- A transient axe false-positive: a full-page re-audit briefly flagged a
+  `color-contrast` violation on the Explainability page's pipeline
+  final node — investigated, not dismissed: the flagged colors
+  (`#24282d`, `#404245`, `#0e3720`) were mid-CSS-transition
+  interpolated values, caught by axe running at the exact tail of the
+  500ms ceremonial reveal. Re-confirmed 0 violations with a longer
+  settle wait; not a persistent defect.
+
 ### Limitations
 
 - The frontend covers exactly the three Day 14 judge-demo scenarios —
@@ -1775,7 +1846,13 @@ after each milestone's QA pass). Responsive QA at 1440×900/768×1024/
 - Headless QA (axe, screenshots, keyboard/reduced-motion checks) used a
   temporary, non-committed browser-automation install against the local
   system Chrome — not part of a CI pipeline.
+- The Recovery Analysis seed-sensitivity table shows n=3 seeds
+  qualitatively only — no confidence interval or significance test is
+  computed or implied anywhere on that page.
+- The Day 10 McNemar comparison shown on Recovery Analysis describes
+  transaction-level paired outcomes under simulation; it is not a claim
+  of production effectiveness.
 - All Day 9-14 limitations already documented in their own sections
   above remain unchanged and are carried forward, not re-litigated —
   including Day 12's un-investigated 15/15 held-out INFRASTRUCTURE
-  result, now also disclosed on the Incident Replay page.
+  result, disclosed on the Incident Replay page.

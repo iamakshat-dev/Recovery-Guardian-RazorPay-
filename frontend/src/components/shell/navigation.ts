@@ -15,7 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "safety", label: "Safety", enabled: true },
   { id: "decision-pipeline", label: "Decision Pipeline", enabled: true },
   { id: "incident-replay", label: "Incident Replay", enabled: true },
-  { id: "recovery", label: "Recovery", enabled: false },
+  { id: "recovery", label: "Recovery", enabled: true },
   { id: "transactions", label: "Transactions", enabled: false },
   { id: "explainability", label: "Explainability", enabled: true },
   { id: "architecture", label: "Architecture", enabled: false },

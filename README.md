@@ -187,7 +187,7 @@ make train
 make calibrate
 
 # Run the full backend test suite (309 tests as of Day 14; the
-# frontend's own test suite — 66 tests as of Day 15 — is separate, see below)
+# frontend's own test suite — 84 tests as of Day 15 — is separate, see below)
 pytest -q
 
 # Day 14 — judge-facing demo (WEBHOOK_AMBIGUITY + two INFRASTRUCTURE
@@ -208,15 +208,15 @@ python experiments/run_day9_experiment.py --seed 42
 python experiments/run_day10_analysis.py
 
 # Day 15 — regenerate the frontend's artifact-backed data snapshot
-# (reads the three JSON artifacts above; fails loudly if any is missing)
+# (reads day9/day10/day12/day14 result JSON; fails loudly if any is missing)
 python scripts/generate_frontend_snapshot.py
 
 # Day 15 — frontend (Overview, Safety, Decision Pipeline, Explainability,
-# Incident Replay)
+# Incident Replay, Recovery Analysis)
 cd frontend
 npm install
 npm run dev     # local dev server
-npm test        # 66 frontend tests
+npm test        # 84 frontend tests
 npm run build   # production build
 ```
 
@@ -249,10 +249,21 @@ policy engine, or the simulator itself.
   policy result, train/validation/test disclosure, the `WEBHOOK_AMBIGUITY`
   safety result), explicitly labeled a **historical synthetic replay**,
   never live monitoring.
+- **Recovery** (Recovery Analysis) — the safety-constrained-recovery
+  evidence in full: a hand-built Recovery-vs-Safety chart (one aggregate
+  point per strategy — never a per-transaction or per-seed view),
+  strategy comparison in experiment order (never Guardian-first), the
+  Day 9 `WEBHOOK_AMBIGUITY` deep dive (25 transactions, explicitly
+  distinguished from Incident Replay's 1-transaction Day 12 population),
+  a root-cause-by-strategy matrix, and the full 3-seed × 4-strategy
+  sensitivity table. States plainly that Rules-only recovers more than
+  Guardian, and that Guardian's demonstrated result is zero
+  duplicate-charge risk across every tested seed — never that Guardian
+  "wins" on recovery.
 
 **Data plumbing**: `scripts/generate_frontend_snapshot.py` is the single,
 read-only boundary between the frozen backend artifacts
-(`experiments/results/day{9,12,14}_*.json`) and the frontend
+(`experiments/results/day{9,10,12,14}_*.json`) and the frontend
 (`frontend/src/data/snapshot.ts`, committed and typed). It only reads,
 validates, and selects already-computed values — it never recomputes a
 metric, reruns the model or policy, or invents a missing value; missing/
