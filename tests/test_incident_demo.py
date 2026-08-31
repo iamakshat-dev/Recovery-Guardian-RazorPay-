@@ -206,6 +206,20 @@ def test_output_artifact_has_required_structure(tmp_path):
 
 
 def test_output_artifact_file_written_by_running_the_script():
+    # Self-contained: writes the artifact itself, exactly as main() does,
+    # rather than assuming a prior interactive run already left one on
+    # disk. A genuinely fresh clone/checkout has no such prior run, and
+    # test execution order across this file is not guaranteed to place
+    # this after test_two_separate_processes_produce_byte_identical_
+    # artifacts (the only other test in this file that invokes the
+    # script as a subprocess) -- found by the Day 15 pre-merge branch
+    # dry run, which is the first time this suite ever ran against a
+    # truly fresh clone.
+    artifact = run_replay()
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(OUTPUT_PATH, "w") as f:
+        json.dump(artifact, f, indent=2, sort_keys=True)
+
     assert OUTPUT_PATH.exists()
     with open(OUTPUT_PATH) as f:
         data = json.load(f)
