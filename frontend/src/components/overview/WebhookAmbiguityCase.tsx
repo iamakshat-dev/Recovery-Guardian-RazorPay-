@@ -44,7 +44,7 @@ export function WebhookAmbiguityCase({
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -right-24 top-0 h-[320px] w-[320px] rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0) 70%)" }}
+        style={{ background: "radial-gradient(circle, rgb(var(--color-success) / 0.10) 0%, rgb(var(--color-success) / 0) 70%)" }}
       />
 
       <div className="relative mx-auto max-w-4xl">

@@ -4,9 +4,10 @@ interface ComingSoonProps {
 
 /**
  * Rendered only as a defensive fallback — every disabled nav item is
- * unclickable (see components/shell/Sidebar.tsx), so this should not
- * normally be reachable. It exists so an unexpected route never
- * silently renders a blank page or fake functionality.
+ * unclickable (see components/shell/TopNav.tsx and
+ * MobileNavOverlay.tsx), so this should not normally be reachable. It
+ * exists so an unexpected route never silently renders a blank page or
+ * fake functionality.
  */
 export function ComingSoon({ label }: ComingSoonProps) {
   return (

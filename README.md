@@ -187,7 +187,7 @@ make train
 make calibrate
 
 # Run the full backend test suite (309 tests as of Day 14; the
-# frontend's own test suite — 100 tests as of the Final Polish pass —
+# frontend's own test suite — 111 tests as of the Visual System pass —
 # is separate, see below)
 pytest -q
 
@@ -217,7 +217,7 @@ python scripts/generate_frontend_snapshot.py
 cd frontend
 npm install
 npm run dev     # local dev server
-npm test        # 100 frontend tests
+npm test        # 111 frontend tests
 npm run build   # production build
 ```
 
@@ -302,6 +302,35 @@ The Day 9 `WEBHOOK_AMBIGUITY` population (25 held-out test transactions,
 shown on Safety) and the Day 12 `WEBHOOK_AMBIGUITY` population (1
 incident-window transaction, shown on Incident Replay) are two distinct
 populations, always labeled separately and never combined.
+
+## Visual system
+
+A single semantic token layer (`frontend/src/index.css`, CSS custom
+properties) backs every Tailwind color class already used across the
+app (`bg-bg`, `text-text-muted`, `border-safety/40`, ...) via
+`tailwind.config.js`'s `rgb(var(--x) / <alpha-value>)` pattern — no
+component hardcodes a color, and toggling the theme reskins the whole
+app without touching a single component. A guard test
+(`visualTokens.test.ts`) scans the entire frontend source tree and
+fails if any raw hex/rgb/hsl literal appears outside `index.css` itself.
+
+- **Warm palette, dual theme** — dark (the product's original identity)
+  and light, both tuned to WCAG AA (4.5:1), including against the
+  lightly-tinted card backgrounds (`bg-warning/10`, `bg-safety/[0.05..
+  0.06]`) that turned out to be the actual binding constraint, not the
+  plain page background. Persisted to `localStorage`, resolved from
+  `prefers-color-scheme` when no explicit choice exists, applied via an
+  inline `<head>` script before first paint (no flash).
+- **Top navigation** — replaces the Milestone 1 sidebar. Sticky, not
+  scroll-hijacking; a single CSS-only underline indicator tracks the
+  active section (`aria-current="page"`); a full-height mobile overlay
+  (`<lg`) with a real focus trap, Escape-to-close, and focus return to
+  the trigger button.
+- **No animation library** — every transition (nav indicator, theme
+  switch, hover/focus states) is plain CSS; `prefers-reduced-motion`
+  degrades every one of them to instant with no information hidden
+  behind motion (verified by emulating it directly in the browser, not
+  just inspecting the CSS).
 
 ## Architecture
 

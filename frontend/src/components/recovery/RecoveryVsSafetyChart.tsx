@@ -72,8 +72,8 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
           const y = yScale(value);
           return (
             <g key={`y-${i}`}>
-              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y} y2={y} stroke="#252B33" strokeWidth={1} />
-              <text x={MARGIN.left - 10} y={y} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="#7B8794" fontFamily="ui-monospace, monospace">
+              <line x1={MARGIN.left} x2={WIDTH - MARGIN.right} y1={y} y2={y} stroke="rgb(var(--color-border))" strokeWidth={1} />
+              <text x={MARGIN.left - 10} y={y} textAnchor="end" dominantBaseline="middle" fontSize={11} fill="rgb(var(--color-text-muted))" fontFamily="ui-monospace, monospace">
                 {Math.round(value)}
               </text>
             </g>
@@ -91,7 +91,7 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
                 y={HEIGHT - MARGIN.bottom + 20}
                 textAnchor="middle"
                 fontSize={11}
-                fill="#7B8794"
+                fill="rgb(var(--color-text-muted))"
                 fontFamily="ui-monospace, monospace"
               >
                 {`₹${Math.round(value / 1000)}K`}
@@ -101,18 +101,18 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
         })}
 
         {/* Axis lines */}
-        <line x1={MARGIN.left} x2={MARGIN.left} y1={MARGIN.top} y2={HEIGHT - MARGIN.bottom} stroke="#252B33" strokeWidth={1.5} />
+        <line x1={MARGIN.left} x2={MARGIN.left} y1={MARGIN.top} y2={HEIGHT - MARGIN.bottom} stroke="rgb(var(--color-border))" strokeWidth={1.5} />
         <line
           x1={MARGIN.left}
           x2={WIDTH - MARGIN.right}
           y1={HEIGHT - MARGIN.bottom}
           y2={HEIGHT - MARGIN.bottom}
-          stroke="#252B33"
+          stroke="rgb(var(--color-border))"
           strokeWidth={1.5}
         />
 
         {/* Axis labels */}
-        <text x={MARGIN.left + PLOT_WIDTH / 2} y={HEIGHT - 6} textAnchor="middle" fontSize={11} fill="#9AA3AE">
+        <text x={MARGIN.left + PLOT_WIDTH / 2} y={HEIGHT - 6} textAnchor="middle" fontSize={11} fill="rgb(var(--color-text-secondary))">
           Simulated amount recovered &rarr;
         </text>
         <text
@@ -120,7 +120,7 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
           y={MARGIN.top + PLOT_HEIGHT / 2}
           textAnchor="middle"
           fontSize={11}
-          fill="#9AA3AE"
+          fill="rgb(var(--color-text-secondary))"
           transform={`rotate(-90, 14, ${MARGIN.top + PLOT_HEIGHT / 2})`}
         >
           Duplicate-charge risk count
@@ -133,17 +133,17 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
           return (
             <g key={p.strategy}>
               {p.isGuardian ? (
-                <circle cx={cx} cy={cy} r={16} fill="rgba(34,197,94,0.12)" />
+                <circle cx={cx} cy={cy} r={16} fill="rgb(var(--color-success) / 0.12)" />
               ) : null}
               <circle
                 cx={cx}
                 cy={cy}
                 r={7}
-                fill={p.isGuardian ? "#22C55E" : "#60A5FA"}
-                stroke="#080A0D"
+                fill={p.isGuardian ? "rgb(var(--color-success))" : "rgb(var(--color-info))"}
+                stroke="rgb(var(--color-bg))"
                 strokeWidth={2}
               />
-              <text x={cx} y={cy - 14} textAnchor="middle" fontSize={11} fill="#F3F5F7" fontFamily="ui-monospace, monospace">
+              <text x={cx} y={cy - 14} textAnchor="middle" fontSize={11} fill="rgb(var(--color-text-primary))" fontFamily="ui-monospace, monospace">
                 {p.strategy}
               </text>
             </g>

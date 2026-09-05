@@ -1,35 +1,54 @@
 /** @type {import('tailwindcss').Config} */
+
+// Each entry reads a CSS custom property defined in src/index.css (see
+// that file's module comment for the full token rationale). The
+// `rgb(var(--x) / <alpha-value>)` pattern is what lets Tailwind's
+// opacity-modifier syntax (`bg-safety/40`, `text-warning`, ...) keep
+// working — Tailwind substitutes `<alpha-value>` with the modifier at
+// build time. Every existing component class name is preserved
+// (`bg`, `border`, `text.primary/secondary/muted`, `safety`, `warning`,
+// `critical`, `info`) — only the underlying value now resolves through
+// the theme token layer instead of a fixed hex, so toggling
+// `[data-theme]` on <html> reskins the whole app without per-component
+// changes.
+function withOpacity(variable) {
+  return `rgb(var(${variable}) / <alpha-value>)`;
+}
+
 export default {
+  // Theming is done entirely through the CSS custom properties in
+  // src/index.css (`:root` = dark, `[data-theme="light"]` override) --
+  // no `dark:` Tailwind variant is used anywhere, so darkMode is left
+  // at its default.
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         bg: {
-          DEFAULT: "#080A0D",
-          surface: "#101318",
-          surface2: "#151A20",
+          DEFAULT: withOpacity("--color-bg"),
+          surface: withOpacity("--color-surface"),
+          surface2: withOpacity("--color-surface-raised"),
+          subtle: withOpacity("--color-surface-subtle"),
         },
         border: {
-          DEFAULT: "#252B33",
+          DEFAULT: withOpacity("--color-border"),
         },
         text: {
-          primary: "#F3F5F7",
-          secondary: "#9AA3AE",
-          // #68717D (the Milestone 1 spec value) fails WCAG AA contrast
-          // (3.88:1) against the darkest surface (#080A0D) at the small
-          // text sizes this token is actually used at — found by the
-          // Milestone 2 axe-core audit. Lightened to #7B8794 (5.10:1),
-          // which still reads as clearly muted relative to `secondary`
-          // and `primary`. Every other Milestone 1 color is unchanged.
-          muted: "#7B8794",
+          primary: withOpacity("--color-text-primary"),
+          secondary: withOpacity("--color-text-secondary"),
+          muted: withOpacity("--color-text-muted"),
         },
+        // "safety" keeps its existing name (BLOCK_RECONCILE, zero
+        // duplicate-risk) -- it is the product's one reserved safety
+        // color, never reused as a generic "positive" accent elsewhere.
         safety: {
-          DEFAULT: "#22C55E",
-          glow: "rgba(34, 197, 94, 0.12)",
+          DEFAULT: withOpacity("--color-success"),
+          glow: "rgb(var(--color-success) / 0.12)",
         },
-        warning: "#F59E0B",
-        critical: "#EF4444",
-        info: "#60A5FA",
+        warning: withOpacity("--color-warning"),
+        critical: withOpacity("--color-danger"),
+        info: withOpacity("--color-info"),
+        accent: withOpacity("--color-accent"),
       },
       fontFamily: {
         sans: [

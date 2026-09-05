@@ -33,7 +33,7 @@ export function SafetyKpi({ duplicateChargeRiskBySeed }: SafetyKpiProps) {
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0) 70%)" }}
+          style={{ background: "radial-gradient(circle, rgb(var(--color-success) / 0.12) 0%, rgb(var(--color-success) / 0) 70%)" }}
         />
       ) : null}
 

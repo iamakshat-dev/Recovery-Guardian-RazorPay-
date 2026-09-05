@@ -2011,3 +2011,146 @@ Explorer's search/filter/sort/detail-panel UI over 110 real records, and
 the Architecture page) plus three new shared components and ~2.2 KB of
 additional snapshot data — no new runtime dependency was added (still
 only `react`/`react-dom`).
+
+## Deadline-Constrained Visual System Overhaul (Phases A–E)
+
+Branch `frontend/visual-system`, off `main` at `aa51137` (the verified
+Final Polish commit). Scope: a tokenized warm dual-theme visual system
+and a top-navigation replacement for the Milestone 1 sidebar. No new
+page, no snapshot generator change, no backend touch — this pass is
+purely presentational.
+
+### Token architecture
+
+Every color used across the frontend is now backed by a CSS custom
+property in `frontend/src/index.css`, expressed as an "R G B" triplet
+(not a hex string) specifically so Tailwind's opacity-modifier syntax
+(`bg-safety/40`, `border-warning/30`, `text-info`, ...) keeps working —
+`tailwind.config.js` reads each variable through the
+`rgb(var(--x) / <alpha-value>)` pattern Tailwind substitutes at build
+time. Every existing Tailwind color key (`bg`, `border`, `text.primary/
+secondary/muted`, `safety`, `warning`, `critical`, `info`) is preserved
+exactly — only its underlying value now resolves through the token
+layer, so **no component file needed to change its className** to pick
+up the new palette or support a second theme. A regression test
+(`visualTokens.test.ts`) scans the whole `src/` tree for a raw
+hex/rgb/hsl literal outside `index.css` and fails the build if one
+appears, going forward.
+
+### Warm palette derivation
+
+The visual-system brief supplied an 11-hue baseline per theme
+(background/surface/surface-raised/border/surface-subtle/text-primary/
+text-secondary/text-muted/success/warning/danger). Two departures from
+that literal baseline, both disclosed in `index.css`'s own module
+comment:
+
+1. **A 12th hue, `info`**, was added per theme — a quiet, warm-neutral
+   slate-teal (`#8C9AA6` dark / `#3E6B78` light). The product already
+   relies on a 4th semantic hue distinct from success/warning/danger
+   (`DEFER_RETRY`/`CUSTOMER_RECOVERY` action badges, the `OBSERVED`
+   provenance badge, the active-nav dot, focus rings); collapsing it
+   into "warning" gold would have made a `HUMAN_REVIEW` badge and a
+   `DEFER_RETRY` badge visually indistinguishable — a real information
+   loss the human-designed test in spec section 18 would catch.
+2. **`text-muted` (both themes) and `warning`/`success` (light theme
+   only) were darkened/lightened beyond the literal baseline hex** to
+   clear WCAG AA (4.5:1) — first against the app's most demanding plain
+   surface (`surface-raised`), computed directly via the WCAG relative-
+   luminance formula before any browser testing; then, when the first
+   full axe pass surfaced additional failures specifically on
+   **tinted card backgrounds** (`bg-warning/10`, `bg-safety/[0.05..
+   0.06]` — a light-mode accent tint lightens its background just
+   enough to erode contrast below what the same foreground achieves on
+   a plain surface), `text-muted` and `warning` in light mode were
+   tuned again against that harder case with deliberate headroom
+   (~4.8:1, not the bare 4.5:1 minimum). This mirrors the exact
+   discipline Milestone 1's original axe audit already established for
+   this project's `text-muted` token — found by testing, not assumed
+   from a formula alone.
+
+### Dual theme, no flash
+
+Theme resolution order: an explicit stored choice (`localStorage`,
+key `recovery-guardian:theme`) wins; otherwise `prefers-color-scheme`;
+otherwise dark (the product's native default). The SAME resolution
+runs twice, deliberately: once as an inline, synchronous script in
+`index.html`'s `<head>` (before the stylesheet paints — this is the
+only way to avoid a flash of the wrong theme, since React mounts far
+too late), and again in `src/lib/theme.ts`/`useTheme.ts` for the
+in-page toggle button and its live response to OS-level preference
+changes. `<meta name="color-scheme" content="dark light">` lets the
+browser's own UI (scrollbars, form controls) match too.
+
+### Top navigation
+
+Replaces the Milestone 1 sidebar (`Sidebar.tsx`/`MobileNav.tsx`,
+deleted). `TopNav.tsx` is `sticky top-0` (stays visible on scroll
+without pinning/hijacking the page) with a single CSS-only underline
+indicator (`scale-x-0` → `scale-x-100`, 200ms) driven by
+`aria-current="page"` — the indicator is derived from the same state
+that already marks the active route, not a second, separately-tracked
+position. `MobileNavOverlay.tsx` is a full-height overlay below
+`lg` (1024px, not `md`/768px — see below) with a real focus trap
+(Tab/Shift+Tab cycle within the panel), Escape-to-close, and focus
+return to the trigger button on close — verified directly via
+`fireEvent.keyDown`/`document.activeElement` assertions in
+`MobileNavOverlay.test.tsx`, not just visual inspection.
+
+**Breakpoint finding**: the first responsive QA pass (768×1024) found
+a real horizontal-overflow bug (+228–235px) — the desktop nav's
+original `md:flex` breakpoint (768px) meant the horizontal nav row
+rendered exactly at the classic tablet width the QA matrix tests,
+where 8 nav items with padding do not fit in 768px and the row
+overflowed rather than wrapping. Fixed by moving the desktop/mobile nav
+switch to `lg:` (1024px) throughout `TopNav.tsx`/
+`MobileNavOverlay.tsx` — tablet-width viewports now get the same
+full-height overlay as mobile, which was always the intended fallback
+for "not enough width for a horizontal row," not a workaround.
+
+### QA methodology note: transient vs. persistent contrast findings
+
+The first full axe pass (3 viewports × 2 themes × 8 pages, ~900ms
+settle wait per page) reported dark-theme contrast violations
+concentrated entirely on pages using `PipelineDiagram`'s ceremonial
+reveal transition — re-run with a 2500ms settle wait (the same
+investigation Milestone 4 already established for this exact
+component), and all of them disappeared, confirming they were the same
+transient mid-CSS-transition artifact as before, not a new regression.
+The **light-theme** violations, by contrast, persisted unchanged at
+2500ms — that was the signal that those were real (leading to the
+tinted-card-background fix described above), not transient. Both
+categories were investigated rather than assumed; only the confirmed-
+real one was changed.
+
+### Verification
+
+- Frontend tests: 100 → 111 (17 files; +8 new: `ThemeToggle.test.tsx`,
+  `TopNav.test.tsx`, `MobileNavOverlay.test.tsx`,
+  `visualTokens.test.ts`).
+- Backend: unchanged, 309 passed. Frozen firewall diff against
+  `aa51137`: empty (checked before implementation, after
+  implementation, and immediately before merge).
+- Accessibility: 0 real violations across 2 themes × 3 viewports
+  (1440×900, 768×1024, 390×844) × 8 pages, plus a dedicated
+  `prefers-reduced-motion: reduce` emulation pass (0 violations at a
+  200ms settle wait — content is fully settled immediately, confirming
+  no information is hidden behind motion) and a focus-trap/Escape/
+  focus-return verification of the mobile overlay under reduced motion.
+- Responsive: 0 horizontal-overflow issues after the breakpoint fix
+  (previously 16, all at 768px, all resolved by the `lg:` breakpoint
+  change above).
+- Browser console: 0 errors, 0 warnings, across every theme/viewport/
+  page combination tested.
+- Bundle size: see table below — no animation library was added.
+
+| | before (Final Polish, `aa51137`) | after (Visual System) | change |
+|---|---|---|---|
+| JS (raw / gzip) | 288,432 / 71,304 B | 291,288 / 72,186 B | +2,856 / +882 B |
+| CSS (raw / gzip) | 19,261 / 4,617 B | 24,236 / 5,217 B | +4,975 / +600 B |
+
+The CSS growth is the new token layer itself (two full theme
+definitions plus the `prefers-color-scheme` fallback block); the JS
+growth is the new `TopNav`/`MobileNavOverlay`/`ThemeToggle` components
+and theme-resolution logic. `package.json`'s dependency list is
+unchanged — still only `react`/`react-dom` at runtime.

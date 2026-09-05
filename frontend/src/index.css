@@ -2,6 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Recovery Guardian — Visual System Tokens (Final Deadline-Constrained
+ * Visual Overhaul, Phase B/C/D)
+ *
+ * A single semantic token layer, expressed as CSS custom properties in
+ * "R G B" triplet form so Tailwind's opacity-modifier syntax
+ * (`bg-safety/40`, `text-warning`, `border-info/30`, ...) keeps working
+ * unchanged across every existing component (see tailwind.config.js,
+ * which reads these variables via `rgb(var(--x) / <alpha-value>)`).
+ * Components never hardcode a theme-specific color — they consume the
+ * existing Tailwind semantic classes, which now resolve through this
+ * token layer instead of a fixed hex value.
+ *
+ * Dark is the default (`:root`, no attribute needed) matching the
+ * product's original identity; `[data-theme="light"]` overrides it.
+ * `prefers-color-scheme: light` is honored ONLY when the user has not
+ * made an explicit choice (see `lib/theme.ts` and the inline no-flash
+ * script in index.html) — an explicit toggle always wins.
+ *
+ * Palette baseline (11 hues per theme, from the visual-system brief):
+ *   background / surface / surface-raised / border / surface-subtle /
+ *   text-primary / text-secondary / text-muted / success / warning / danger
+ * `info` is a deliberate, disclosed extension beyond that 11-hue
+ * baseline: the product already relies on a 4th semantic hue distinct
+ * from success/warning/danger (DEFER_RETRY, CUSTOMER_RECOVERY, the
+ * OBSERVED provenance badge, the active-nav dot, focus rings) — folding
+ * it into "warning" gold would erase a real, existing visual
+ * distinction (a HUMAN_REVIEW badge and a DEFER_RETRY badge would
+ * become indistinguishable). A quiet, warm-neutral slate-teal was
+ * chosen to stay in the "quiet, technical" register rather than
+ * reintroducing a cold, saturated blue.
+ *
+ * `text-muted` (both themes), `success` (light), and `warning` (light)
+ * are each adjusted from the literal baseline hex to clear WCAG AA
+ * (4.5:1). The demanding case is a tinted card background
+ * (`bg-warning/10`, `bg-safety/[0.05..0.06]`) — a light-mode accent tint
+ * lightens its background just enough to erode contrast below what the
+ * same color achieves against a plain surface, found by the Visual
+ * System axe pass; `text-muted` and `warning` in light mode are tuned
+ * with a ~4.8:1 margin against that worst case, not the bare 4.5:1
+ * minimum, for headroom. The same discipline Milestone 1's axe audit
+ * already established for this project's original `text-muted` token.
+ * See docs/architecture.md's Visual System section for the exact
+ * contrast ratios verified.
+ */
+:root {
+  --color-bg: 16 18 17; /* #101211 */
+  --color-surface: 24 27 26; /* #181B1A */
+  --color-surface-raised: 33 37 36; /* #212524 */
+  --color-border: 42 47 45; /* #2A2F2D */
+  --color-surface-subtle: 58 64 61; /* #3A403D */
+  --color-text-primary: 236 239 237; /* #ECEFED */
+  --color-text-secondary: 155 165 160; /* #9BA5A0 */
+  --color-text-muted: 133 140 136; /* #858C88 -- adjusted from #6B736F for AA */
+  --color-success: 63 191 135; /* #3FBF87 */
+  --color-warning: 217 164 65; /* #D9A441 */
+  --color-danger: 224 112 95; /* #E0705F */
+  --color-info: 140 154 166; /* #8C9AA6 -- disclosed extension, see above */
+  --color-accent: var(--color-warning);
+  --color-focus: var(--color-warning);
+  --shadow-color: 0 0 0;
+  --shadow-alpha: 0.4;
+}
+
+:root[data-theme="light"] {
+  --color-bg: 250 249 246; /* #FAF9F6 */
+  --color-surface: 255 255 255; /* #FFFFFF */
+  --color-surface-raised: 243 242 238; /* #F3F2EE */
+  --color-border: 228 226 220; /* #E4E2DC */
+  --color-surface-subtle: 207 204 196; /* #CFCCC4 */
+  --color-text-primary: 23 26 24; /* #171A18 */
+  --color-text-secondary: 92 99 95; /* #5C635F */
+  --color-text-muted: 102 106 104; /* #666A68 -- adjusted from #8A918D for AA against tinted card backgrounds (bg-warning/10, bg-safety/[0.05..0.06]) */
+  --color-success: 22 125 86; /* #167D56 -- adjusted from #17845A for AA */
+  --color-warning: 139 92 21; /* #8B5C15 -- adjusted from #A9701A for AA against tinted card backgrounds (bg-warning/10) */
+  --color-danger: 180 69 58; /* #B4453A */
+  --color-info: 62 107 120; /* #3E6B78 */
+  --color-accent: var(--color-warning);
+  --color-focus: var(--color-warning);
+  --shadow-color: 23 26 24;
+  --shadow-alpha: 0.08;
+}
+
+/* No stored preference: follow the system, light branch only (dark is
+   already the :root default, so no dark-mode media block is needed). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]):not([data-theme="light"]) {
+    --color-bg: 250 249 246;
+    --color-surface: 255 255 255;
+    --color-surface-raised: 243 242 238;
+    --color-border: 228 226 220;
+    --color-surface-subtle: 207 204 196;
+    --color-text-primary: 23 26 24;
+    --color-text-secondary: 92 99 95;
+    --color-text-muted: 102 106 104;
+    --color-success: 22 125 86;
+    --color-warning: 139 92 21;
+    --color-danger: 180 69 58;
+    --color-info: 62 107 120;
+    --color-accent: var(--color-warning);
+    --color-focus: var(--color-warning);
+    --shadow-color: 23 26 24;
+    --shadow-alpha: 0.08;
+  }
+}
+
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text-primary));
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -14,10 +126,10 @@
 }
 
 ::selection {
-  background-color: rgba(96, 165, 250, 0.25);
+  background-color: rgb(var(--color-accent) / 0.25);
 }
 
 :focus-visible {
-  outline: 2px solid #60a5fa;
+  outline: 2px solid rgb(var(--color-focus));
   outline-offset: 2px;
 }

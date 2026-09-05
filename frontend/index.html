@@ -3,16 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23080A0D'/%3E%3Cpath d='M12 4l7 3v5c0 4.5-3 7.5-7 8-4-.5-7-3.5-7-8V7l7-3z' fill='none' stroke='%2322C55E' stroke-width='1.6'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23101211'/%3E%3Cpath d='M12 4l7 3v5c0 4.5-3 7.5-7 8-4-.5-7-3.5-7-8V7l7-3z' fill='none' stroke='%233FBF87' stroke-width='1.6'/%3E%3C/svg%3E"
     />
     <title>Recovery Guardian</title>
     <meta
       name="description"
       content="Recovery Guardian — safe recovery decisions for payment failures, backed by a calibrated ML classifier and a deterministic safety policy."
     />
+    <script>
+      // No-flash theme resolution (Visual System Phase D). Must run
+      // before any stylesheet paints -- this is why it is an inline,
+      // synchronous script in <head> rather than something in
+      // src/lib/theme.ts (React mounts far too late to avoid a flash).
+      // Mirrors lib/theme.ts's resolution order exactly: an explicit
+      // stored choice wins; otherwise follow prefers-color-scheme;
+      // otherwise stay dark (the product's native default).
+      (function () {
+        try {
+          var stored = window.localStorage.getItem("recovery-guardian:theme");
+          var theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
   </head>
   <body class="bg-bg text-text-primary font-sans antialiased">
     <div id="root"></div>

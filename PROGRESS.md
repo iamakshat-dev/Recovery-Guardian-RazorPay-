@@ -998,3 +998,29 @@ Branch `frontend/final-polish`, off `main` at `3707ce2`. Full details in
 - Bundle size grew ~28.6% raw / ~14.6% gzip on the JS bundle, entirely
   attributable to the two new pages and their components — no new
   runtime dependency.
+
+## Deadline-Constrained Visual System Overhaul (Phases A–E)
+
+Branch `frontend/visual-system`, off `main` at `aa51137`. Full details
+in `docs/architecture.md`'s "Deadline-Constrained Visual System
+Overhaul" section. Summary:
+
+- Semantic CSS-custom-property token layer backing every existing
+  Tailwind color class (no component className changed); a warm dual
+  theme (dark default, light, persisted + no-flash) built on it.
+- Top navigation replaces the Milestone 1 sidebar: sticky, CSS-only
+  active-indicator, full-height mobile overlay with a real focus trap/
+  Escape/focus-return.
+- Real bug found and fixed: the desktop-nav breakpoint (`md`, 768px)
+  collided exactly with the 768px QA test width, overflowing the page
+  by ~230px — moved the switch to `lg` (1024px).
+- Real bug found and fixed: light-theme `text-muted`/`warning` cleared
+  AA against plain surfaces but not against the app's tinted card
+  backgrounds (`bg-warning/10`, `bg-safety/[0.05..0.06]`) — retuned
+  with headroom (~4.8:1) against that harder case.
+- Dark-theme contrast flags at first pass were re-confirmed transient
+  (same `PipelineDiagram` mid-transition artifact as Milestone 4) via a
+  longer settle wait, not "fixed" — nothing was broken there.
+- Frontend tests: 100 → 111 (17 files). Backend unchanged, 309 passed.
+  Frozen firewall diff against `aa51137`: empty. No animation library
+  added.
