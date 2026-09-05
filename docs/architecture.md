@@ -1883,3 +1883,131 @@ the frozen generation code or to any generated value. `artifacts/`
 (trained/calibrated model) remains gitignored and regenerated via
 `make train`/`make calibrate`, consistent with Day 6's existing
 reproducibility verification for the training step itself.
+
+## Day 15 Final Polish — Architecture, Transaction Explorer, Accessibility
+
+Branch `frontend/final-polish`, off `main` at `3707ce2` (the verified,
+post-merge `submission-v2` commit). Two conditional enhancements —
+Architecture and Transaction Explorer — plus an accessibility audit
+across the full (now eight-page) navigation.
+
+### Data-availability audit (before building anything)
+
+Per the governing rule ("artifact wins"), the audit inspected the raw
+JSON structure directly rather than assuming a record shape:
+
+- `experiments/results/day9_seed_42_aggregate.json`'s companion file
+  `day9_seed_42_per_transaction.json` (already on disk, never previously
+  read by the snapshot generator) contains 968 records — confirmed to be
+  242 unique transactions × 4 strategies, exactly the per-strategy
+  cardinality trap the audit was watching for, not 242 flat records.
+  Its `decision_id` field is uniformly empty across every record, and it
+  carries no timestamp or dataset-split field.
+- `experiments/results/day12_incident_demo.json["transactions"]` (also
+  already on disk) contains 110 records — one per transaction, already
+  the Day 12 incident-window population summarized in aggregate on
+  Incident Replay. Each record carries `predicted_root_cause`,
+  `calibrated_probability`, `actual_root_cause` (a known synthetic
+  label), `policy_action`, `policy_reason_code`, `split_membership`, a
+  timestamp, and the simulated outcome — richer, single-row-per-
+  transaction, and not yet exposed at individual-record granularity
+  anywhere in the frontend.
+
+**Decision**: Transaction Explorer is built on the Day 12 population
+(110 of 110 transactions shown — no subsetting was necessary). The Day 9
+per-transaction file was not used: its `decision_id` field is unusable,
+it lacks provenance fields the Explorer needs, and — most importantly —
+a per-transaction-per-strategy Explorer would need to explain 4 rows per
+transaction in the UI, adding real interaction complexity for a
+population (Day 9's 242 transactions, 25 `WEBHOOK_AMBIGUITY`) already
+thoroughly presented in aggregate on Recovery Analysis. This is a
+disclosed choice, not an oversight: nothing prevents a future pass from
+also exposing the Day 9 per-transaction file if a concrete need arises.
+
+### Transaction Explorer
+
+Extends `scripts/generate_frontend_snapshot.py`'s existing `day12` dict
+with one more field, `transactions` (110 records) — no new artifact, no
+recomputation; every value is copied verbatim from fields the generator
+was already trusted to read. Two fields required careful, distinctly-
+labeled handling per the ground-truth firewall: `predicted_root_cause`
+(the frozen classifier's actual output) and `actual_root_cause` (the
+known synthetic label the replay was generated with) are exposed as
+`predictedRootCause` and `actualRootCause` — never merged into one
+"root cause" field, and the UI labels them "Predicted root cause
+(model)" vs. "Known root cause (synthetic label)" respectively, with an
+explicit note that the known label is never available to the model or
+policy engine at decision time. (Verified during the audit: all 110
+predictions match their known labels in this replay window — reported
+as an observation about this one 110-transaction sample, not a general
+accuracy claim.)
+
+UI: a master-detail layout (search by transaction ID, filter by root
+cause/policy action, sort by model confidence, select a row to open an
+inline detail panel) rather than a wide table — kept usable at 390px
+without horizontal scrolling, matching the "investigation surface, not
+a spreadsheet" brief.
+
+### Architecture page
+
+Purely conceptual — renders no snapshot data, computes nothing. Reuses
+the exact same shared `PipelineDiagram` component and the exact same
+node labels already used by the Overview preview and the Decision
+Pipeline page (`Payment Event`, `Feature Builder`, `ML Classifier`,
+`Policy Engine`, `Action`) rather than inventing new terminology or a
+second diagram implementation. Because this rendering is conceptual and
+not tied to one transaction's actual outcome, it uses
+`finalStyle="quiet"`/`finalAccent="neutral"` — the ceremonial
+lock-and-glow stays reserved for an actual `BLOCK_RECONCILE` decision
+elsewhere, never generalized to "here is the list of possible actions."
+
+The explanation layer is deliberately NOT a node in that diagram: it
+renders as a separate, dashed-border, "downstream · optional · no
+decision authority" callout below the solid decision path, connected by
+a visually thinner/dashed line — never positioned between Policy Engine
+and Action, and never implying an LLM sits inside the decision path.
+The page also states the safety boundary explicitly ("the model
+recommends a confidence estimate; the policy engine determines whether
+recovery is permitted"), a determinism framing
+(`ML confidence + deterministic policy constraints → action`, struck
+through against `LLM → payment action`), and a concise, undefensive
+scope disclosure (synthetic data, deterministic replay, simulated
+outcomes, optional explanation provider, no live payment execution).
+
+### Accessibility findings (Final Polish axe pass, 3 viewports × 8 pages)
+
+- **Real, fixed**: `RecoveryVsSafetyChart.tsx`, `RootCauseMatrix.tsx`,
+  and `SeedSensitivityTable.tsx` each wrap their accessible data table in
+  an `overflow-x-auto` div with no way for a keyboard-only user to
+  actually scroll it once it becomes horizontally scrollable (at ≤768px
+  viewport width) — axe's `scrollable-region-focusable` rule, 3 nodes,
+  found only once the audit covered the 768px tablet width (not
+  previously audited by any prior milestone's QA pass). Fixed by adding
+  `tabIndex={0}` plus `role="region"`/`aria-label` to each wrapper —
+  the same minimal, targeted fix applied identically in all three
+  places, not three different remediations.
+- **Investigated, confirmed transient (not a regression)**: Decision
+  Pipeline's `color-contrast` flag reappeared under a ~900ms settle wait
+  at desktop and tablet widths — the same transient mid-CSS-transition
+  finding first documented in Milestone 4 (the flagged node is the
+  ceremonial `BLOCK_RECONCILE` final node's accent color, caught while
+  its 500ms reveal transition is still interpolating). Re-confirmed 0
+  violations at both widths with a 2500ms settle wait. No code change
+  was made for this one — there is nothing broken to fix.
+- Final result: 0 real violations across all 3 viewports (1440×900,
+  768×1024, 390×844) × 8 pages, including the Transaction Explorer's
+  detail-panel-open state; 0 horizontal-overflow issues; 0 console
+  errors.
+
+### Bundle size
+
+| | before (post-M4, `3707ce2`) | after (Final Polish) | change |
+|---|---|---|---|
+| JS (raw / gzip) | 224,235 / 62,246 B | 288,432 / 71,304 B | +64,197 / +9,058 B |
+| CSS (raw / gzip) | 17,512 / 4,305 B | 19,261 / 4,617 B | +1,749 / +312 B |
+
+The increase is entirely two new, fully-functional pages (Transaction
+Explorer's search/filter/sort/detail-panel UI over 110 real records, and
+the Architecture page) plus three new shared components and ~2.2 KB of
+additional snapshot data — no new runtime dependency was added (still
+only `react`/`react-dom`).

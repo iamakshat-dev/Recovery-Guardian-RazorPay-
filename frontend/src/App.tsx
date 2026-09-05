@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppShell } from "./components/shell/AppShell";
 import { NAV_ITEMS } from "./components/shell/navigation";
+import { Architecture } from "./pages/Architecture";
 import { ComingSoon } from "./pages/ComingSoon";
 import { DecisionPipeline } from "./pages/DecisionPipeline";
 import { Explainability } from "./pages/Explainability";
@@ -8,6 +9,7 @@ import { IncidentReplay } from "./pages/IncidentReplay";
 import { Overview } from "./pages/Overview";
 import { RecoveryAnalysis } from "./pages/RecoveryAnalysis";
 import { SafetyHero } from "./pages/SafetyHero";
+import { TransactionExplorer } from "./pages/TransactionExplorer";
 
 function App() {
   const [activeSection, setActiveSection] = useState("overview");
@@ -27,6 +29,10 @@ function App() {
     content = <IncidentReplay />;
   } else if (activeSection === "recovery") {
     content = <RecoveryAnalysis />;
+  } else if (activeSection === "transactions") {
+    content = <TransactionExplorer />;
+  } else if (activeSection === "architecture") {
+    content = <Architecture />;
   } else {
     content = <ComingSoon label={activeItem?.label ?? "Section"} />;
   }

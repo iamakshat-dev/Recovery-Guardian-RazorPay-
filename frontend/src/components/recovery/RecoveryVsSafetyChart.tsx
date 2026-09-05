@@ -151,8 +151,18 @@ export function RecoveryVsSafetyChart({ points }: RecoveryVsSafetyChartProps) {
         })}
       </svg>
 
-      {/* Accessible text/table equivalent -- not merely a tooltip */}
-      <div className="mt-4 overflow-x-auto">
+      {/* Accessible text/table equivalent -- not merely a tooltip.
+          tabIndex + role/aria-label: this container becomes horizontally
+          scrollable below ~480px of available width (tablet/mobile), and
+          a scrollable region must be reachable by keyboard, not only by
+          touch/trackpad -- found by the Final Polish axe pass
+          (scrollable-region-focusable) at the 768px viewport. */}
+      <div
+        className="mt-4 overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="Recovery versus safety data table"
+      >
         <table className="w-full min-w-[480px] border-collapse text-left text-xs">
           <caption className="sr-only">Recovery versus safety, one row per strategy</caption>
           <thead>

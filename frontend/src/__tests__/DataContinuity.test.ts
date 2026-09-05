@@ -69,4 +69,13 @@ describe("Data continuity — Day 12 extension reuses the same day12 object", ()
     expect(d12).toHaveProperty("after"); // M3
     expect(d12).toHaveProperty("simulatedRecoverySummary"); // M3
   });
+
+  it("the Final Polish transactions array sits on the SAME day12 object -- no second Day 12 record store", () => {
+    const d12 = snapshot.day12;
+    expect(d12).toHaveProperty("transactions");
+    expect(Array.isArray(d12.transactions)).toBe(true);
+    expect(d12.transactions.length).toBe(d12.incidentCount);
+    const topLevelKeys = Object.keys(snapshot);
+    expect(topLevelKeys.filter((k) => k.toLowerCase().includes("transaction"))).toEqual([]);
+  });
 });

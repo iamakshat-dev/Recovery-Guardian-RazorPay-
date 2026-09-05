@@ -60,6 +60,24 @@ share an identical schema, and `day10_analysis.json`'s `seed_sensitivity`
 is that same data already consolidated — so no per-seed schema
 normalization logic lives in this script; it is a straight select.
 
+Final-polish addition (Transaction Explorer): extends the SAME `day12`
+dict this script already loads — no new artifact, no new record model.
+`day12_incident_demo.json["transactions"]` (110 records, the full
+Day 12 incident-window population) was already being read for its
+aggregates; this pass additionally exposes the individual records
+themselves so the Explorer can show "what happened to one transaction,
+and why" rather than only aggregate counts. Two fields on each record
+require careful, honest handling per the project's ground-truth
+firewall: `predicted_root_cause` (the frozen classifier's output) and
+`actual_root_cause` (the known synthetic label this replay was
+generated with) are DIFFERENT fields with different epistemic status —
+both are copied through under distinctly-named keys
+(`predictedRootCause` vs `actualRootCause`) and the frontend must never
+present the latter as something the model inferred. This is the Day 12
+incident-window population (110 transactions, 1 WEBHOOK_AMBIGUITY case)
+— never to be merged with or presented as the Day 9 population (242
+transactions, 25 WEBHOOK_AMBIGUITY cases) used elsewhere.
+
 Run:
     python3 scripts/generate_frontend_snapshot.py
 """
@@ -289,6 +307,43 @@ def _day10_seed_sensitivity(day10: Dict[str, Any]) -> Dict[str, Any]:
     return result, primary_seed, [ _validate_int(s, "sensitivity_seeds") for s in sensitivity_seeds ]
 
 
+EXPECTED_DAY12_TRANSACTION_COUNT = 110
+
+
+def _day12_transaction(t: Dict[str, Any], index: int) -> Dict[str, Any]:
+    p = f"day12.transactions[{index}]"
+    return {
+        "transactionId": _validate_str(t["transaction_id"], f"{p}.transaction_id"),
+        "timestamp": _validate_str(t["timestamp"], f"{p}.timestamp"),
+        "amount": round(_validate_numeric(t["amount"], f"{p}.amount"), 2),
+        "paymentMethod": _validate_str(t["payment_method"], f"{p}.payment_method"),
+        "failureCode": _validate_str(t["failure_code"], f"{p}.failure_code"),
+        "webhookDelaySeconds": round(_validate_numeric(t["webhook_delay_seconds"], f"{p}.webhook_delay_seconds"), 2),
+        "incidentActive": bool(t["incident_active"]),
+        "predictedRootCause": _validate_str(t["predicted_root_cause"], f"{p}.predicted_root_cause"),
+        "predictedProbability": _validate_probability(t["calibrated_probability"], f"{p}.calibrated_probability"),
+        "actualRootCause": _validate_str(t["actual_root_cause"], f"{p}.actual_root_cause"),
+        "policyAction": _validate_str(t["policy_action"], f"{p}.policy_action"),
+        "policyReasonCode": _validate_str(t["policy_reason_code"], f"{p}.policy_reason_code"),
+        "splitMembership": _validate_str(t["split_membership"], f"{p}.split_membership"),
+        "simulated": {
+            "recovered": bool(t["simulated_recovered"]),
+            "amountRecovered": round(_validate_numeric(t["simulated_amount_recovered"], f"{p}.simulated_amount_recovered"), 2),
+            "duplicateChargeRisk": bool(t["simulated_duplicate_charge_risk"]),
+        },
+    }
+
+
+def _day12_transactions(day12: Dict[str, Any]) -> list:
+    raw = day12["transactions"]
+    if not isinstance(raw, list) or len(raw) != EXPECTED_DAY12_TRANSACTION_COUNT:
+        raise SnapshotSourceError(
+            f"day12.transactions expected {EXPECTED_DAY12_TRANSACTION_COUNT} records, "
+            f"found {len(raw) if isinstance(raw, list) else type(raw)}"
+        )
+    return [_day12_transaction(t, i) for i, t in enumerate(raw)]
+
+
 def _day10_mcnemar_guardian_vs_rules_only(day10: Dict[str, Any]) -> Dict[str, Any]:
     row = day10["mcnemar_primary_seed"]["GUARDIAN_vs_RULES_ONLY"]
     return {
@@ -366,6 +421,8 @@ def build_snapshot() -> Dict[str, Any]:
     if not safety.get("safety_pass"):
         raise SnapshotSourceError("Day 12 webhook_ambiguity_safety.safety_pass is not true — refusing to snapshot")
 
+    day12_transactions = _day12_transactions(day12)
+
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "sourceArtifacts": {
@@ -441,6 +498,7 @@ def build_snapshot() -> Dict[str, Any]:
                     sim_recovery["simulated_duplicate_charge_risk_count"], "simulated_recovery_summary.simulated_duplicate_charge_risk_count"
                 ),
             },
+            "transactions": day12_transactions,
         },
         "day14": {
             "scenarios": day14_scenarios,

@@ -970,3 +970,31 @@ webhook-signature verification anywhere in this project.
   no assertion weakened, no frozen production code touched (`tests/` is
   not part of the frozen firewall). Verified: 309/309 backend tests pass
   from a genuinely fresh clone after this fix.
+
+## Day 15 Final Polish — Architecture, Transaction Explorer, Accessibility
+
+Branch `frontend/final-polish`, off `main` at `3707ce2`. Full details in
+`docs/architecture.md`'s "Day 15 Final Polish" section. Summary:
+
+- Data-availability audit found genuine transaction-level records in two
+  places: Day 9's per-transaction file (968 = 242 transactions × 4
+  strategies, cardinality trap avoided) and Day 12's `transactions`
+  array (110, one per transaction, richer fields). Built the Transaction
+  Explorer on the Day 12 population — search/filter/sort plus a detail
+  panel distinguishing "Predicted root cause (model)" from "Known root
+  cause (synthetic label)" (ground-truth firewall).
+- Added an Architecture page: the same shared `PipelineDiagram`/node
+  labels used elsewhere, the explanation layer rendered as a visually
+  separate downstream/optional callout (never a node between Policy
+  Engine and Action), an explicit safety-boundary statement, a
+  determinism statement, and an honest scope disclosure.
+- Full-navigation axe pass (3 viewports × 8 pages) found and fixed one
+  real issue — three data-table scrollable containers not keyboard-
+  focusable below 768px (`tabIndex`/`role="region"` added to all three);
+  re-confirmed the Milestone 4 transient color-contrast finding on
+  Decision Pipeline is still transient, not a regression.
+- Frontend test suite: 84 → 100 tests (13 files). Backend: unchanged,
+  309 passed. Frozen firewall diff against `3707ce2`: empty throughout.
+- Bundle size grew ~28.6% raw / ~14.6% gzip on the JS bundle, entirely
+  attributable to the two new pages and their components — no new
+  runtime dependency.

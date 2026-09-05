@@ -39,7 +39,11 @@ export function RootCauseMatrix({ table }: RootCauseMatrixProps) {
   const rootCauses = Object.keys(table);
 
   return (
-    <div className="overflow-x-auto">
+    // tabIndex + role/aria-label: this container becomes horizontally
+    // scrollable below ~640px of available width -- a scrollable region
+    // must be reachable by keyboard (found by the Final Polish axe pass,
+    // scrollable-region-focusable, at the 768px viewport).
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Root-cause breakdown data table">
       <table className="w-full min-w-[640px] border-collapse text-left text-xs">
         <caption className="sr-only">Simulated recovery rate by root cause and strategy</caption>
         <thead>

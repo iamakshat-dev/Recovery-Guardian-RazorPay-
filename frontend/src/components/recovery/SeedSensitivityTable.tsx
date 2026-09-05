@@ -37,7 +37,9 @@ interface SeedSensitivityTableProps {
  */
 export function SeedSensitivityTable({ seedSensitivity, seeds }: SeedSensitivityTableProps) {
   return (
-    <div className="overflow-x-auto">
+    // tabIndex + role/aria-label: see RootCauseMatrix.tsx for why this
+    // scrollable container needs to be keyboard-focusable.
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Seed sensitivity data table">
       <table className="w-full min-w-[640px] border-collapse text-left text-xs">
         <caption className="sr-only">Simulated recovery and duplicate-charge risk by seed and strategy</caption>
         <thead>

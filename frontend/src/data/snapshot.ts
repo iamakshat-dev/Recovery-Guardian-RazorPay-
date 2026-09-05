@@ -20,10 +20,10 @@
  *   python3 scripts/generate_frontend_snapshot.py
  */
 
-export const SNAPSHOT_GENERATED_AT = "2026-08-31T20:09:30.045616+00:00";
+export const SNAPSHOT_GENERATED_AT = "2026-09-05T08:41:54.299858+00:00";
 
 export const snapshot = {
-  "generatedAt": "2026-08-31T20:09:30.045616+00:00",
+  "generatedAt": "2026-09-05T08:41:54.299858+00:00",
   "sourceArtifacts": {
     "day9": "experiments/results/day9_seed_42_aggregate.json",
     "day12": "experiments/results/day12_incident_demo.json",
@@ -167,7 +167,2209 @@ export const snapshot = {
       "recoveredCount": 55,
       "totalAmountRecovered": 146160.09,
       "duplicateChargeRiskCount": 0
-    }
+    },
+    "transactions": [
+      {
+        "transactionId": "txn_001504_7c7d2d",
+        "timestamp": "2026-08-15T22:10:37",
+        "amount": 1753.21,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 2.54,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.986549,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001500_acaa0e",
+        "timestamp": "2026-08-15T22:10:41",
+        "amount": 433.12,
+        "paymentMethod": "upi",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 2.05,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.96852,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001517_c3d1c4",
+        "timestamp": "2026-08-15T22:10:44",
+        "amount": 620.5,
+        "paymentMethod": "upi",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 6.7,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.792173,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001606_1e86b2",
+        "timestamp": "2026-08-15T22:10:51",
+        "amount": 3174.88,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 6.73,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.739879,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001516_eeb9e2",
+        "timestamp": "2026-08-15T22:10:59",
+        "amount": 12167.73,
+        "paymentMethod": "upi",
+        "failureCode": "unknown",
+        "webhookDelaySeconds": 28.3,
+        "incidentActive": false,
+        "predictedRootCause": "WEBHOOK_AMBIGUITY",
+        "predictedProbability": 0.990472,
+        "actualRootCause": "WEBHOOK_AMBIGUITY",
+        "policyAction": "BLOCK_RECONCILE",
+        "policyReasonCode": "WEBHOOK_STATE_UNKNOWN",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001577_4494a8",
+        "timestamp": "2026-08-15T22:11:13",
+        "amount": 2058.84,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 1.04,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.972803,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2058.84,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001515_409546",
+        "timestamp": "2026-08-15T22:11:31",
+        "amount": 674.56,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 4.19,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.973574,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 674.56,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001552_ffddc3",
+        "timestamp": "2026-08-15T22:11:31",
+        "amount": 2613.62,
+        "paymentMethod": "wallet",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 1.08,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.973212,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2613.62,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001514_8b0322",
+        "timestamp": "2026-08-15T22:11:32",
+        "amount": 8012.13,
+        "paymentMethod": "upi",
+        "failureCode": "card_expired",
+        "webhookDelaySeconds": 2.44,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.970131,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001538_88096a",
+        "timestamp": "2026-08-15T22:11:58",
+        "amount": 1186.65,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 0.64,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.978544,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1186.65,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001581_4b9154",
+        "timestamp": "2026-08-15T22:12:52",
+        "amount": 253.83,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 0.31,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.975024,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 253.83,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001566_3678a1",
+        "timestamp": "2026-08-15T22:13:06",
+        "amount": 1426.24,
+        "paymentMethod": "wallet",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 1.04,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.977787,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001539_bcd358",
+        "timestamp": "2026-08-15T22:13:16",
+        "amount": 6447.49,
+        "paymentMethod": "upi",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 4.76,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.98719,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001561_a82a2b",
+        "timestamp": "2026-08-15T22:13:19",
+        "amount": 261.96,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 10.59,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.983706,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 261.96,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001549_53390e",
+        "timestamp": "2026-08-15T22:13:30",
+        "amount": 2007.35,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 7.83,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.663032,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001520_4ac510",
+        "timestamp": "2026-08-15T22:13:31",
+        "amount": 391.51,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 7.38,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.985467,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 391.51,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001559_4e984f",
+        "timestamp": "2026-08-15T22:13:40",
+        "amount": 860.01,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 4.48,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.985094,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001511_2d86e5",
+        "timestamp": "2026-08-15T22:14:07",
+        "amount": 231.65,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 3.0,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.977379,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 231.65,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001555_29715e",
+        "timestamp": "2026-08-15T22:14:13",
+        "amount": 3052.82,
+        "paymentMethod": "netbanking",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 0.37,
+        "incidentActive": false,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.9653,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001593_e4e50a",
+        "timestamp": "2026-08-15T22:14:48",
+        "amount": 1910.14,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 3.63,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.895341,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1910.14,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001522_0d825f",
+        "timestamp": "2026-08-15T22:15:52",
+        "amount": 1502.22,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 12.63,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.946088,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1502.22,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001585_ee9f5a",
+        "timestamp": "2026-08-15T22:16:08",
+        "amount": 2030.45,
+        "paymentMethod": "wallet",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.45,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.968884,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2030.45,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001547_f017bc",
+        "timestamp": "2026-08-15T22:16:11",
+        "amount": 409.03,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 7.8,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.524537,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001521_3e6c89",
+        "timestamp": "2026-08-15T22:16:31",
+        "amount": 3460.71,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 6.47,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.97017,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 3460.71,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001598_1f7303",
+        "timestamp": "2026-08-15T22:17:14",
+        "amount": 6068.21,
+        "paymentMethod": "netbanking",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 6.4,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.982872,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001537_7c3db6",
+        "timestamp": "2026-08-15T22:17:37",
+        "amount": 8153.18,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 2.32,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.969414,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 8153.18,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001578_d68869",
+        "timestamp": "2026-08-15T22:17:48",
+        "amount": 586.04,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 3.94,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.982437,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001589_231440",
+        "timestamp": "2026-08-15T22:17:49",
+        "amount": 2740.7,
+        "paymentMethod": "card",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 0.64,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.963958,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001502_1f4264",
+        "timestamp": "2026-08-15T22:18:26",
+        "amount": 3395.31,
+        "paymentMethod": "card",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 6.15,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.982381,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 3395.31,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001544_bbab15",
+        "timestamp": "2026-08-15T22:18:56",
+        "amount": 2063.98,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.73,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.988135,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2063.98,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001564_0dd450",
+        "timestamp": "2026-08-15T22:19:20",
+        "amount": 2152.31,
+        "paymentMethod": "card",
+        "failureCode": "issuer_declined",
+        "webhookDelaySeconds": 0.44,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.958493,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001601_5b55c8",
+        "timestamp": "2026-08-15T22:20:08",
+        "amount": 1261.72,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 2.34,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.984604,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1261.72,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001528_08d855",
+        "timestamp": "2026-08-15T22:20:21",
+        "amount": 321.44,
+        "paymentMethod": "upi",
+        "failureCode": "user_cancelled",
+        "webhookDelaySeconds": 2.08,
+        "incidentActive": true,
+        "predictedRootCause": "USER_ABANDONMENT",
+        "predictedProbability": 0.97677,
+        "actualRootCause": "USER_ABANDONMENT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001557_fe7bd4",
+        "timestamp": "2026-08-15T22:21:06",
+        "amount": 398.77,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 1.17,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.98167,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001579_19aab3",
+        "timestamp": "2026-08-15T22:21:15",
+        "amount": 1249.93,
+        "paymentMethod": "netbanking",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 1.76,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.977817,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1249.93,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001595_55ccff",
+        "timestamp": "2026-08-15T22:21:42",
+        "amount": 1899.74,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 3.91,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.790962,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1899.74,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001545_57b82e",
+        "timestamp": "2026-08-15T22:21:44",
+        "amount": 637.72,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 6.2,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.992964,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 637.72,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001558_b2595b",
+        "timestamp": "2026-08-15T22:22:10",
+        "amount": 589.78,
+        "paymentMethod": "upi",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 1.28,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.962548,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001507_411f87",
+        "timestamp": "2026-08-15T22:22:39",
+        "amount": 1523.91,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 9.38,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.969941,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001567_2b079f",
+        "timestamp": "2026-08-15T22:22:45",
+        "amount": 1421.03,
+        "paymentMethod": "wallet",
+        "failureCode": "card_expired",
+        "webhookDelaySeconds": 1.9,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.967418,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1421.03,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001582_a71d7d",
+        "timestamp": "2026-08-15T22:23:04",
+        "amount": 365.03,
+        "paymentMethod": "card",
+        "failureCode": "user_cancelled",
+        "webhookDelaySeconds": 1.39,
+        "incidentActive": false,
+        "predictedRootCause": "USER_ABANDONMENT",
+        "predictedProbability": 0.974912,
+        "actualRootCause": "USER_ABANDONMENT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001594_ed1c3a",
+        "timestamp": "2026-08-15T22:23:44",
+        "amount": 3569.91,
+        "paymentMethod": "card",
+        "failureCode": "otp_timeout",
+        "webhookDelaySeconds": 0.09,
+        "incidentActive": false,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.948857,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001503_461211",
+        "timestamp": "2026-08-15T22:23:48",
+        "amount": 2373.35,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 0.08,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.98239,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2373.35,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001563_77a1a0",
+        "timestamp": "2026-08-15T22:24:34",
+        "amount": 515.28,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.3,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.988748,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001501_c4b715",
+        "timestamp": "2026-08-15T22:25:17",
+        "amount": 3903.39,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 7.22,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.738799,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001565_f62208",
+        "timestamp": "2026-08-15T22:25:18",
+        "amount": 512.51,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 0.84,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.969908,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 512.51,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001529_6a550b",
+        "timestamp": "2026-08-15T22:25:25",
+        "amount": 142.85,
+        "paymentMethod": "wallet",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 4.22,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.989798,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 142.85,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001560_4ff8d2",
+        "timestamp": "2026-08-15T22:25:26",
+        "amount": 266.24,
+        "paymentMethod": "wallet",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 2.76,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.971247,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001535_9a5789",
+        "timestamp": "2026-08-15T22:25:37",
+        "amount": 28813.19,
+        "paymentMethod": "card",
+        "failureCode": "issuer_declined",
+        "webhookDelaySeconds": 3.63,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.970521,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 28813.19,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001527_7bc584",
+        "timestamp": "2026-08-15T22:25:44",
+        "amount": 7454.76,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 18.72,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.63754,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001608_c6d6de",
+        "timestamp": "2026-08-15T22:25:48",
+        "amount": 2858.2,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 2.32,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.981657,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2858.2,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001572_1a2a0a",
+        "timestamp": "2026-08-15T22:25:52",
+        "amount": 434.55,
+        "paymentMethod": "wallet",
+        "failureCode": "card_expired",
+        "webhookDelaySeconds": 0.31,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.959541,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 434.55,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001587_37d87f",
+        "timestamp": "2026-08-15T22:26:14",
+        "amount": 2502.07,
+        "paymentMethod": "card",
+        "failureCode": "card_expired",
+        "webhookDelaySeconds": 0.97,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.966752,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001574_31a2de",
+        "timestamp": "2026-08-15T22:27:39",
+        "amount": 1632.0,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 3.43,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.976526,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1632.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001554_702ff6",
+        "timestamp": "2026-08-15T22:27:42",
+        "amount": 547.05,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 4.63,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.987367,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 547.05,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001584_b4e124",
+        "timestamp": "2026-08-15T22:27:50",
+        "amount": 4064.43,
+        "paymentMethod": "upi",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 8.15,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.970543,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001525_85dd63",
+        "timestamp": "2026-08-15T22:28:08",
+        "amount": 4686.33,
+        "paymentMethod": "netbanking",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 2.31,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.985671,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 4686.33,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001551_f776d0",
+        "timestamp": "2026-08-15T22:28:16",
+        "amount": 2627.17,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 1.62,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.956754,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001568_005539",
+        "timestamp": "2026-08-15T22:28:21",
+        "amount": 1411.37,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 2.54,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.900616,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001518_4293ef",
+        "timestamp": "2026-08-15T22:28:22",
+        "amount": 3157.99,
+        "paymentMethod": "wallet",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 5.42,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.988106,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 3157.99,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001573_8cd0de",
+        "timestamp": "2026-08-15T22:28:23",
+        "amount": 1033.46,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 0.04,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.952784,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1033.46,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001599_1571d8",
+        "timestamp": "2026-08-15T22:28:30",
+        "amount": 1472.78,
+        "paymentMethod": "card",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 4.76,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.977618,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1472.78,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001519_7b7937",
+        "timestamp": "2026-08-15T22:28:33",
+        "amount": 1932.44,
+        "paymentMethod": "upi",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 0.6,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.965646,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1932.44,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001550_21d316",
+        "timestamp": "2026-08-15T22:28:33",
+        "amount": 1384.88,
+        "paymentMethod": "card",
+        "failureCode": "user_cancelled",
+        "webhookDelaySeconds": 1.55,
+        "incidentActive": true,
+        "predictedRootCause": "USER_ABANDONMENT",
+        "predictedProbability": 0.978057,
+        "actualRootCause": "USER_ABANDONMENT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001546_688801",
+        "timestamp": "2026-08-15T22:28:44",
+        "amount": 5203.16,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 5.06,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.841391,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001609_054a48",
+        "timestamp": "2026-08-15T22:28:49",
+        "amount": 396.47,
+        "paymentMethod": "upi",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 2.65,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.987612,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001575_f6404b",
+        "timestamp": "2026-08-15T22:28:54",
+        "amount": 675.53,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 2.41,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.961249,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 675.53,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001562_dce051",
+        "timestamp": "2026-08-15T22:29:09",
+        "amount": 770.25,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 1.16,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.949756,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001533_5867d9",
+        "timestamp": "2026-08-15T22:29:38",
+        "amount": 1545.24,
+        "paymentMethod": "upi",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 2.01,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.971906,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001591_f8ca2c",
+        "timestamp": "2026-08-15T22:30:08",
+        "amount": 2347.68,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 6.34,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.993158,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2347.68,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001604_1b5f6d",
+        "timestamp": "2026-08-15T22:30:14",
+        "amount": 956.54,
+        "paymentMethod": "upi",
+        "failureCode": "issuer_declined",
+        "webhookDelaySeconds": 0.29,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.95367,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 956.54,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001600_88c30d",
+        "timestamp": "2026-08-15T22:30:22",
+        "amount": 15789.89,
+        "paymentMethod": "wallet",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 7.58,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.976717,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 15789.89,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001542_1e34b9",
+        "timestamp": "2026-08-15T22:30:43",
+        "amount": 10404.74,
+        "paymentMethod": "card",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.07,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.987954,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 10404.74,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001588_5c41c0",
+        "timestamp": "2026-08-15T22:31:12",
+        "amount": 3270.83,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 4.15,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.680103,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001506_c21bf7",
+        "timestamp": "2026-08-15T22:31:31",
+        "amount": 491.78,
+        "paymentMethod": "netbanking",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 6.44,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.990087,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001523_2270e0",
+        "timestamp": "2026-08-15T22:32:19",
+        "amount": 1978.97,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 1.8,
+        "incidentActive": false,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.982842,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1978.97,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001556_a9f10c",
+        "timestamp": "2026-08-15T22:32:36",
+        "amount": 2013.77,
+        "paymentMethod": "card",
+        "failureCode": "card_expired",
+        "webhookDelaySeconds": 0.44,
+        "incidentActive": true,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.945501,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2013.77,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001541_e00cf3",
+        "timestamp": "2026-08-15T22:32:43",
+        "amount": 2570.08,
+        "paymentMethod": "card",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 1.62,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.981654,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001576_b7a32d",
+        "timestamp": "2026-08-15T22:32:47",
+        "amount": 2414.38,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 11.26,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.978001,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 2414.38,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001534_d3d89e",
+        "timestamp": "2026-08-15T22:33:13",
+        "amount": 7260.2,
+        "paymentMethod": "upi",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 7.64,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.810689,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001509_2d6209",
+        "timestamp": "2026-08-15T22:33:18",
+        "amount": 677.41,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 9.92,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.730289,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001505_75bf35",
+        "timestamp": "2026-08-15T22:33:32",
+        "amount": 3466.48,
+        "paymentMethod": "card",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 0.44,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.977421,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001583_294ff2",
+        "timestamp": "2026-08-15T22:33:55",
+        "amount": 373.7,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 0.29,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.970981,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 373.7,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001607_308cc6",
+        "timestamp": "2026-08-15T22:34:07",
+        "amount": 380.6,
+        "paymentMethod": "upi",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 0.84,
+        "incidentActive": false,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.976314,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 380.6,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001524_899a32",
+        "timestamp": "2026-08-15T22:34:09",
+        "amount": 1025.01,
+        "paymentMethod": "card",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 2.96,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.966673,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001569_76eb83",
+        "timestamp": "2026-08-15T22:34:39",
+        "amount": 800.36,
+        "paymentMethod": "wallet",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 2.69,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.975585,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 800.36,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001603_6fd962",
+        "timestamp": "2026-08-15T22:35:01",
+        "amount": 651.46,
+        "paymentMethod": "upi",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 1.18,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.9608,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 651.46,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001512_73e1bb",
+        "timestamp": "2026-08-15T22:35:12",
+        "amount": 1400.79,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 4.62,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.853865,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1400.79,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001597_87b9b0",
+        "timestamp": "2026-08-15T22:35:43",
+        "amount": 230.46,
+        "paymentMethod": "netbanking",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 9.45,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.630497,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001596_559023",
+        "timestamp": "2026-08-15T22:35:44",
+        "amount": 672.96,
+        "paymentMethod": "wallet",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 7.42,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.974813,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001570_26b334",
+        "timestamp": "2026-08-15T22:35:54",
+        "amount": 862.58,
+        "paymentMethod": "netbanking",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 12.23,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.950889,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 862.58,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001532_8bf2be",
+        "timestamp": "2026-08-15T22:36:07",
+        "amount": 908.41,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 10.57,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.974826,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001602_4f356d",
+        "timestamp": "2026-08-15T22:36:07",
+        "amount": 1381.45,
+        "paymentMethod": "card",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 13.76,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.956387,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001592_443944",
+        "timestamp": "2026-08-15T22:36:27",
+        "amount": 4775.75,
+        "paymentMethod": "wallet",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.78,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.983682,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 4775.75,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001580_46c983",
+        "timestamp": "2026-08-15T22:36:31",
+        "amount": 4164.14,
+        "paymentMethod": "upi",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 1.44,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.966815,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001531_6a259e",
+        "timestamp": "2026-08-15T22:36:51",
+        "amount": 1128.42,
+        "paymentMethod": "netbanking",
+        "failureCode": "otp_timeout",
+        "webhookDelaySeconds": 0.6,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.958935,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001571_7e772f",
+        "timestamp": "2026-08-15T22:36:55",
+        "amount": 3489.44,
+        "paymentMethod": "wallet",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 1.79,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.978351,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 3489.44,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001605_6e0d22",
+        "timestamp": "2026-08-15T22:37:00",
+        "amount": 712.07,
+        "paymentMethod": "wallet",
+        "failureCode": "3ds_auth_failed",
+        "webhookDelaySeconds": 0.75,
+        "incidentActive": true,
+        "predictedRootCause": "OTP_TIMEOUT",
+        "predictedProbability": 0.943454,
+        "actualRootCause": "OTP_TIMEOUT",
+        "policyAction": "NO_ACTION",
+        "policyReasonCode": "NO_AUTOMATED_ACTION_DEFINED",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001586_12efcc",
+        "timestamp": "2026-08-15T22:37:18",
+        "amount": 2640.19,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 5.99,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.70059,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001508_7e534d",
+        "timestamp": "2026-08-15T22:37:30",
+        "amount": 130.35,
+        "paymentMethod": "netbanking",
+        "failureCode": "invalid_card",
+        "webhookDelaySeconds": 4.88,
+        "incidentActive": false,
+        "predictedRootCause": "CARD_DECLINE",
+        "predictedProbability": 0.963062,
+        "actualRootCause": "CARD_DECLINE",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001540_265a97",
+        "timestamp": "2026-08-15T22:37:52",
+        "amount": 990.26,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 10.08,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.971391,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001590_b83e34",
+        "timestamp": "2026-08-15T22:37:58",
+        "amount": 4718.86,
+        "paymentMethod": "upi",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 5.1,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.975627,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 4718.86,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001530_fa4ebe",
+        "timestamp": "2026-08-15T22:38:07",
+        "amount": 351.73,
+        "paymentMethod": "wallet",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 7.33,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.672903,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001536_9cdbbb",
+        "timestamp": "2026-08-15T22:38:43",
+        "amount": 1562.96,
+        "paymentMethod": "netbanking",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 8.63,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.966087,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1562.96,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001526_e4016f",
+        "timestamp": "2026-08-15T22:38:57",
+        "amount": 379.43,
+        "paymentMethod": "netbanking",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 0.17,
+        "incidentActive": true,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.971582,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 379.43,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001513_3f9017",
+        "timestamp": "2026-08-15T22:39:05",
+        "amount": 1930.35,
+        "paymentMethod": "card",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 20.37,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.564782,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001510_fa451a",
+        "timestamp": "2026-08-15T22:39:25",
+        "amount": 622.01,
+        "paymentMethod": "upi",
+        "failureCode": "gateway_timeout",
+        "webhookDelaySeconds": 5.78,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.73645,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "HUMAN_REVIEW",
+        "policyReasonCode": "LOW_MODEL_CONFIDENCE",
+        "splitMembership": "TRAIN",
+        "simulated": {
+          "recovered": false,
+          "amountRecovered": 0.0,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001553_455032",
+        "timestamp": "2026-08-15T22:39:41",
+        "amount": 1982.27,
+        "paymentMethod": "netbanking",
+        "failureCode": "service_unavailable",
+        "webhookDelaySeconds": 2.01,
+        "incidentActive": true,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.972289,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1982.27,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001543_6338cb",
+        "timestamp": "2026-08-15T22:39:44",
+        "amount": 932.48,
+        "paymentMethod": "upi",
+        "failureCode": "insufficient_funds",
+        "webhookDelaySeconds": 4.68,
+        "incidentActive": false,
+        "predictedRootCause": "INSUFFICIENT_FUNDS",
+        "predictedProbability": 0.976475,
+        "actualRootCause": "INSUFFICIENT_FUNDS",
+        "policyAction": "CUSTOMER_RECOVERY",
+        "policyReasonCode": "CUSTOMER_SIDE_FAILURE",
+        "splitMembership": "VALIDATION",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 932.48,
+          "duplicateChargeRisk": false
+        }
+      },
+      {
+        "transactionId": "txn_001548_169ef6",
+        "timestamp": "2026-08-15T22:39:48",
+        "amount": 1012.46,
+        "paymentMethod": "upi",
+        "failureCode": "internal_error",
+        "webhookDelaySeconds": 5.43,
+        "incidentActive": false,
+        "predictedRootCause": "INFRASTRUCTURE",
+        "predictedProbability": 0.97814,
+        "actualRootCause": "INFRASTRUCTURE",
+        "policyAction": "DEFER_RETRY",
+        "policyReasonCode": "INFRA_CLUSTER_HIGH",
+        "splitMembership": "TEST",
+        "simulated": {
+          "recovered": true,
+          "amountRecovered": 1012.46,
+          "duplicateChargeRisk": false
+        }
+      }
+    ]
   },
   "day14": {
     "scenarios": {

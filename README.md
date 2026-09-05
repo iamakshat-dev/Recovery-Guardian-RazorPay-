@@ -187,7 +187,8 @@ make train
 make calibrate
 
 # Run the full backend test suite (309 tests as of Day 14; the
-# frontend's own test suite — 84 tests as of Day 15 — is separate, see below)
+# frontend's own test suite — 100 tests as of the Final Polish pass —
+# is separate, see below)
 pytest -q
 
 # Day 14 — judge-facing demo (WEBHOOK_AMBIGUITY + two INFRASTRUCTURE
@@ -212,11 +213,11 @@ python experiments/run_day10_analysis.py
 python scripts/generate_frontend_snapshot.py
 
 # Day 15 — frontend (Overview, Safety, Decision Pipeline, Explainability,
-# Incident Replay, Recovery Analysis)
+# Incident Replay, Recovery Analysis, Transaction Explorer, Architecture)
 cd frontend
 npm install
 npm run dev     # local dev server
-npm test        # 84 frontend tests
+npm test        # 100 frontend tests
 npm run build   # production build
 ```
 
@@ -260,6 +261,33 @@ policy engine, or the simulator itself.
   Guardian, and that Guardian's demonstrated result is zero
   duplicate-charge risk across every tested seed — never that Guardian
   "wins" on recovery.
+- **Transaction Explorer** — built only because a data-availability audit
+  (Final Polish pass) confirmed genuine transaction-level records exist:
+  all 110 transactions of the Day 12 incident-window replay, individually
+  searchable by ID, filterable by root cause/policy action, sortable by
+  model confidence. Selecting a transaction opens a detail panel showing
+  the event, the model's prediction, the policy decision, and the
+  simulated outcome. Distinguishes "Predicted root cause (model)" from
+  "Known root cause (synthetic label)" as two separate fields — the known
+  label exists only because this is a synthetic replay and is never
+  presented as something the model itself inferred (ground-truth
+  firewall). This is the same Day 12 population already summarized on
+  Incident Replay, shown here at row level — never combined with the
+  separate Day 9 population used on Recovery Analysis.
+- **Architecture** — a one-minute conceptual explanation of the system
+  for a technical judge: the same shared decision-path diagram used
+  elsewhere (`Payment Event -> Feature Builder -> ML Classifier -> Policy
+  Engine -> Action`), the explanation layer rendered as a visually
+  separate, dashed-border, "downstream / optional / no decision
+  authority" callout (never a node in the decision path itself), an
+  explicit statement of the safety boundary ("the model recommends a
+  confidence estimate; the policy engine determines whether recovery is
+  permitted"), a determinism statement (`ML confidence + deterministic
+  policy constraints -> action`, never `LLM -> payment action`), and an
+  honest scope disclosure (synthetic data, deterministic replay,
+  simulated outcomes, optional explanation provider, no live payment
+  execution). Renders no snapshot data and computes nothing — it is
+  documentation, not a dashboard.
 
 **Data plumbing**: `scripts/generate_frontend_snapshot.py` is the single,
 read-only boundary between the frozen backend artifacts
